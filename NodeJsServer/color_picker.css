@@ -1,0 +1,46 @@
+.red, .gre, .blu{
+margin: 7px;
+}
+.red{
+background: rgba(255,100,100,0.7);
+}
+.gre{
+background: rgba(100,255,100,0.7);
+}
+.blu{
+background: rgba(100,100,255,0.7);
+}
+input[type="range"]{
+width: 200px;
+}
+input[type="number"]{
+width: 45px;
+}
+.spa {
+display: inline-block;
+height: 32px;
+width: 100%;
+/*text-align: right;*/
+}
+.but{
+ 
+}
+
+.but_save, .but_load{
+  /*background:url(icon_save.png);*/
+  background-repeat: no-repeat;
+  background-color: #FF5733;
+  width: 32px;
+  height: 32px;
+  border: none;
+  box-shadow: none;
+  border-radius: 0px;
+  /*margin: 7px 7px 7px 7px;*/
+  padding:4px;
+  /*margin:0px;*/
+  cursor: pointer;
+ }
+
+.but_save:hover, .but_load:hover {
+  background-color: #cc4528;
+}
