@@ -16,16 +16,46 @@ width: 200px;
 input[type="number"]{
 width: 45px;
 }
-.spa {
-display: inline-block;
+#bg{
+  margin: 0 5px 0px 3px;
+}
+.color_text {
+padding-left:5px;
+margin:0px;
+display: table-cell;
 height: 32px;
-width: 100%;
+/*display: inline-block;*/
+width: 193px;
+vertical-align: middle;
+font-weight: bold;
+/*text-shadow: -1px 0 #FF5733, 0 0 1px #FF5733, 0 0 3px #FF5733, 0 0 5px #FF5733, 0 0 7px #FF5733, 0 0 9px #FF5733;*/
 /*text-align: right;*/
 }
+/*
+.spa span {
+display: table-cell;
+vertical-align: middle;
+height:32px;
+}
+*/
 .but{
  
 }
-
+table{
+  /*padding:0px;*/
+  margin-top:10px;
+  border:0px;
+  border-spacing: 5px;
+  border-collapse: collapse;
+}
+tr{
+/*  padding:5px;
+  margin:0px;*/
+}
+td{
+  padding:3px;
+  /*margin:0px;*/
+}
 .but_save, .but_load{
   /*background:url(icon_save.png);*/
   background-repeat: no-repeat;

@@ -3,16 +3,15 @@ bg={};sR={};sG={};sB={};
 function setBG(){
 	c=[sR.value.toString(),sG.value.toString(),sB.value.toString()];
 	bg.style.backgroundColor='rgb('+c[0]+','+c[1]+','+c[2]+')';
-	clicked();
+	colorChanged();
 }
 
 function setEL(s, t){
 	s.addEventListener("change", function(){
 	t.value=s.value;
 	setBG();
-},false);
-
-t.addEventListener("change", function(){
+	},false);
+	t.addEventListener("change", function(){
 	if(t.value>255)t.value=255;
 	if(t.value<0)t.value=0;
 	s.value=t.value;
@@ -47,39 +46,71 @@ function sendPost(url,msg){
 var http=new XMLHttpRequest();
 http.open("POST",url,true);
 http.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+http.onreadystatechange=function(){if(http.readyState==4&&http.status==200){/*console.log(http.responseText)*/}};
 http.send(msg);
 }
-function clicked(but){
-	sendPost("index.html","id=100"+"&r="+c[0]+"&g="+c[1]+"&b="+c[2]);
-}
+
 function clickedSave(but){
-var id=but.id.split("_")[1];
-C[id][0]=c[0];
-C[id][1]=c[1];
-C[id][2]=c[2];
-document.getElementById('sp'+id).style.backgroundColor='rgb('+c[0]+','+c[1]+','+c[2]+')';
-sendPost("staticColor.lua","id="+id+"&r="+c[0]+"&g="+c[1]+"&b="+c[2]);
+	var id=but.id.split("_")[1];
+	var name = document.getElementById('sp'+id).innerHTML;
+	var res = confirm("Save color "+name+"?");
+	if(res !== true){return;}
+	C[id][0]=c[0];
+	C[id][1]=c[1];
+	C[id][2]=c[2];
+	document.getElementById('sp'+id).style.backgroundColor='rgb('+c[0]+','+c[1]+','+c[2]+')';
+	var hsp = Math.sqrt(0.299*(C[id][0]*C[id][0])+0.587*(C[id][1]*C[id][1])+0.114*(C[id][2]*C[id][2]));
+	if (hsp > 127.5) {
+		document.getElementById('sp'+id).style.color='#1a1a1a';
+	}else{
+		document.getElementById('sp'+id).style.color='#FF5733';
+	}
+	sendPost("color-picker","type=save&id="+id+"&r="+c[0]+"&g="+c[1]+"&b="+c[2]);
 }
 
-html1='<div id="bg">\
-<span class="red"><input id="sR"type="range"/></span>\
-<input id="tR"type="number"/></br>\
-<span class="gre"><input id="sG"type="range"/></span>\
-<input id="tG"type="number"/></br>\
-<span class="blu"><input id="sB"type="range"/></span>\
-<input id="tB"type="number"/></br></div><div>';
-window.onload=function(){
-	t=html1;
+function clickedRename(but){
+	var id=but.id.split("_")[1];
+	var strR = byteToString(C[id][0]);
+	var strG = byteToString(C[id][1]);
+	var strB = byteToString(C[id][2]);
+	var res = prompt("Enter new name", strR+" "+strG+" "+strB);
+	if(res === null || res === ""){	return;}
+	if(res.length > 12){ res = res.substring(0,12);}
+	document.getElementById('sp'+id).innerHTML = res;
+	sendPost("color-picker","type=rename&id="+id+"&name="+res);
+}
+function byteToString(num){
+	var str = num+"";
+	while(str.length < 3) str = "0"+str;
+	return str;
+}
+
+function loadColorPicker(){
+	var t='<div id="bg">\
+	<span class="red"><input id="sR"type="range"/></span>\
+	<input id="tR"type="number"/></br>\
+	<span class="gre"><input id="sG"type="range"/></span>\
+	<input id="tG"type="number"/></br>\
+	<span class="blu"><input id="sB"type="range"/></span>\
+	<input id="tB"type="number"/></br></div><table>';
 	for(var i=0;i<C.length;i++){
-		t=t+'<span id="sp'+i+'"class="spa">\
-<button class="but_save"id="but_'+i+'"onclick="clickedSave(this)"><img src="icon_save.png"></button>\
-<button class="but_load"id="but_'+i+'"onclick="clickedLoad(this)"><img src="icon_load.png"></button>\
-		</span></br>';
+		t=t+'<tr>\
+<td><button class="but_save"id="but_'+i+'"onclick="clickedSave(this)"><img src="icon_save.png" alt="save"></button></td>\
+<td><button class="but_load"id="but_'+i+'"onclick="clickedRename(this)"><img src="icon_edit.png" alt="rename"></button></td>\
+<td><button class="but_load"id="but_'+i+'"onclick="clickedLoad(this)"><img src="icon_load.png" alt="load"></button></td>\
+<td><span id="sp'+i+'"class="color_text">'+names[i]+'</span></td>\
+</tr>';
 	}
-	t=t+'</div>';
+	t=t+'</table>';
 	document.getElementById('color_menu').innerHTML+=t;
 	for(var i=0;i<C.length;i++){
 		document.getElementById('sp'+i).style.backgroundColor='rgb('+C[i][0]+','+C[i][1]+','+C[i][2]+')';
+		var hsp = Math.sqrt(0.299*(C[i][0]*C[i][0])+0.587*(C[i][1]*C[i][1])+0.114*(C[i][2]*C[i][2]));
+		if (hsp > 127.5) {
+			document.getElementById('sp'+i).style.color='#1a1a1a';
+		}else{
+			document.getElementById('sp'+i).style.color='#FF5733';
+		}
 	}
 	setRanges();
 	bg=document.getElementById('bg');
@@ -99,5 +130,4 @@ window.onload=function(){
 	tG.value=c[1];
 	tB.value=c[2];
 	bg.style.backgroundColor='rgb('+c[0]+','+c[1]+','+c[2]+')';
-	
 }
