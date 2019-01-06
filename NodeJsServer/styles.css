@@ -31,13 +31,11 @@
   border-width:0px 4px 0px 0px;
   border-color:#FF5733;
   border-style:solid;
-  
-  
-  
-  
+}
+#color_menu_top {
+  margin-top: 10px;
 }
 #color_menu {
-	height:100%;
    overflow-y:auto;
   overflow-x:hidden;
 	  margin-top: 10px;
@@ -47,7 +45,7 @@
   /*height: 100%;*/
   /*overflow-y:auto;
   overflow-x:hidden;*/
-   
+  height: calc(100vh - 175px);
   
 }
 #color_menu p{

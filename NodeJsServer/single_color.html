@@ -3,8 +3,9 @@
 <head>
   <meta charset="utf-8">
   <link rel="icon" href="data:,">
-  <script type="text/javascript"src="index.js"></script>
+  <script type="text/javascript"src="single_color.js"></script>
   <link rel="stylesheet"href="styles.css">
+  <link rel="stylesheet"href="single_color.css">
   <link rel="stylesheet"href="color_picker.css">
   <script type="text/javascript"src="color_picker_settings.js"></script>
   <script type="text/javascript"src="color_picker.js"></script>
@@ -17,16 +18,19 @@
       <span>String Lights</span>
     </div>
 	<div id="color_menu_top"></div>
-    <div id="color_menu"></div>
+    <div id="color_menu">
+      
+    </div>
   </div>
   <div>
     <div id="top_menu">
-      <a class="selectedMenu"href="index.html">Home</a>
-      <a href="single_color.html">Single Color</a>
+      <a href="index.html">Home</a>
+      <a class="selectedMenu"href="single_color.html">Single Color</a>
     </div>
     <div id="content">
-      <button id="but_on"onclick="clickedTurn(this)">Turn ON</button>
-      <button id="but_off"onclick="clickedTurn(this)">Turn OFF</button>
+      <div class="custom-select" style="width:200px;">
+        <select name="color" id="colorSelector"></select> 
+	  </div>
     </div>
   </div>
 </body>

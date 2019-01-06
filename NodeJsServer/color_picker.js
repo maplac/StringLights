@@ -9,12 +9,14 @@ function setBG(){
 function setEL(s, t){
 	s.addEventListener("change", function(){
 	t.value=s.value;
+	Cindex = 100;
 	setBG();
 	},false);
 	t.addEventListener("change", function(){
 	if(t.value>255)t.value=255;
 	if(t.value<0)t.value=0;
 	s.value=t.value;
+	Cindex = 100;
 	setBG();
 	},false);
 }
@@ -39,6 +41,7 @@ function clickedLoad(but){
 	tR.value=c[0];
 	tG.value=c[1];
 	tB.value=c[2];
+	Cindex = id;
 	setBG();
 }
 
@@ -92,7 +95,9 @@ function loadColorPicker(){
 	<span class="gre"><input id="sG"type="range"/></span>\
 	<input id="tG"type="number"/></br>\
 	<span class="blu"><input id="sB"type="range"/></span>\
-	<input id="tB"type="number"/></br></div><table>';
+	<input id="tB"type="number"/></br></div>';
+	document.getElementById('color_menu_top').innerHTML=t;
+	t='<table>';
 	for(var i=0;i<C.length;i++){
 		t=t+'<tr>\
 <td><button class="but_save"id="but_'+i+'"onclick="clickedSave(this)"><img src="icon_save.png" alt="save"></button></td>\
@@ -120,14 +125,26 @@ function loadColorPicker(){
 	tR=document.getElementById('tR');
 	tG=document.getElementById('tG');
 	tB=document.getElementById('tB');
+	if(Cindex == 100){
+		sR.value=c[0];
+		sG.value=c[1];
+		sB.value=c[2];
+		tR.value=c[0];
+		tG.value=c[1];
+		tB.value=c[2];
+	}else{
+		c[0]=C[Cindex][0];
+		c[1]=C[Cindex][1];
+		c[2]=C[Cindex][2];
+		sR.value=c[0];
+		sG.value=c[1];
+		sB.value=c[2];
+		tR.value=c[0];
+		tG.value=c[1];
+		tB.value=c[2];
+	}
 	setEL(sR,tR);
 	setEL(sG,tG);
 	setEL(sB,tB);
-	sR.value=c[0];
-	sG.value=c[1];
-	sB.value=c[2];
-	tR.value=c[0];
-	tG.value=c[1];
-	tB.value=c[2];
 	bg.style.backgroundColor='rgb('+c[0]+','+c[1]+','+c[2]+')';
 }
