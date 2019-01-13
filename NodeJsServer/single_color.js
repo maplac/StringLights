@@ -30,6 +30,7 @@ function loadSingleColor(){
 	
 	a = document.createElement("DIV");
 	a.setAttribute("class", "select-selected");
+	a.setAttribute("id", "sel_selected");
 	a.innerHTML = names[Cindex];
 	x.appendChild(a);
 	/* For each element, create a new DIV that will contain the option list: */
@@ -43,12 +44,21 @@ function loadSingleColor(){
 		b.appendChild(c);
 	}
 	b.addEventListener('click', function(e) {
-		console.log(e.target.id);
-		console.log(e);
-		var x = document.getElementsByClassName("select-selected");
-		x = x[0];
-		x.innerHTML = e.target.innerText;
+		//console.log(e.target.id);
+		//console.log(e);
 		var id=e.target.id.split("_")[1];
+		//var x = document.getElementsByClassName("select-selected");
+		//x = x[0];
+		var x = document.getElementById('sel_selected');
+		x.innerHTML = e.target.innerText;
+		x.style.backgroundColor=e.target.style.backgroundColor;//'rgb('+C[id][0]+','+C[id][1]+','+C[id][2]+')';
+		x.style.color = e.target.style.color;
+		/*var hsp = Math.sqrt(0.299*(C[id][0]*C[id][0])+0.587*(C[id][1]*C[id][1])+0.114*(C[id][2]*C[id][2]));
+		if (hsp > 127.5) {
+			x.style.color='#1a1a1a';
+		}else{
+			x.style.color='#FF5733';
+		}*/
 		clickedLoad(document.getElementById("but_"+id));
 	});
 	x.appendChild(b);
@@ -60,6 +70,31 @@ function loadSingleColor(){
 		this.nextSibling.classList.toggle("select-hide");
 		this.classList.toggle("select-arrow-active");
 	});
+	
+	for(var i=0;i<C.length;i++){
+		document.getElementById('sel_'+i).style.backgroundColor='rgb('+C[i][0]+','+C[i][1]+','+C[i][2]+')';
+		if (isColorLight(C[i])) {
+			document.getElementById('sel_'+i).style.color='#1a1a1a';
+		}else{
+			document.getElementById('sel_'+i).style.color='#FF5733';
+		}
+	}
+	var d = document.getElementById('sel_selected');
+	if(SCindex > 0){
+		d.style.backgroundColor = document.getElementById('sel_'+SCindex).style.backgroundColor;
+		d.style.color = document.getElementById('sel_'+SCindex).style.color;
+		d.style.innerHTML = document.getElementById('sel_'+SCindex).innerHTML;
+	}else{
+		d.style.backgroundColor='rgb('+Sc[0]+','+Sc[1]+','+Sc[2]+')';
+		if (isColorLight(C[i])) {
+			d.style.color='#1a1a1a';
+		}else{
+			d.style.color='#FF5733';
+		}
+		d.style.innerHTML = "None";
+	}
+	
+	
 }
 
 window.onload=function(){

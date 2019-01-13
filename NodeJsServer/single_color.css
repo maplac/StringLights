@@ -16,7 +16,7 @@
 }
 
 .select-selected {
-  background-color: DodgerBlue;
+  /*background-color: DodgerBlue;*/
 }
 
 /* Style the arrow inside the select element: */
@@ -52,7 +52,7 @@
   height: calc(100vh - 118px);
   max-height: 1140px;
   position: absolute;
-  background-color: DodgerBlue;
+  /*background-color: DodgerBlue;*/
   top: 100%;
   left: 0;
   right: 0;

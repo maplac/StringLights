@@ -53,6 +53,15 @@ http.onreadystatechange=function(){if(http.readyState==4&&http.status==200){/*co
 http.send(msg);
 }
 
+function isColorLight(color){
+	var hsp = Math.sqrt(0.299*(color[0]*color[0])+0.587*(color[1]*color[1])+0.114*(color[2]*color[2]));
+	if (hsp > 127.5) {
+		return true;
+	}else{
+		return false;
+	}
+}
+
 function clickedSave(but){
 	var id=but.id.split("_")[1];
 	var name = document.getElementById('sp'+id).innerHTML;
@@ -62,8 +71,7 @@ function clickedSave(but){
 	C[id][1]=c[1];
 	C[id][2]=c[2];
 	document.getElementById('sp'+id).style.backgroundColor='rgb('+c[0]+','+c[1]+','+c[2]+')';
-	var hsp = Math.sqrt(0.299*(C[id][0]*C[id][0])+0.587*(C[id][1]*C[id][1])+0.114*(C[id][2]*C[id][2]));
-	if (hsp > 127.5) {
+	if (isColorLight(C[i])) {
 		document.getElementById('sp'+id).style.color='#1a1a1a';
 	}else{
 		document.getElementById('sp'+id).style.color='#FF5733';
@@ -110,8 +118,7 @@ function loadColorPicker(){
 	document.getElementById('color_menu').innerHTML+=t;
 	for(var i=0;i<C.length;i++){
 		document.getElementById('sp'+i).style.backgroundColor='rgb('+C[i][0]+','+C[i][1]+','+C[i][2]+')';
-		var hsp = Math.sqrt(0.299*(C[i][0]*C[i][0])+0.587*(C[i][1]*C[i][1])+0.114*(C[i][2]*C[i][2]));
-		if (hsp > 127.5) {
+		if (isColorLight(C[i])) {
 			document.getElementById('sp'+i).style.color='#1a1a1a';
 		}else{
 			document.getElementById('sp'+i).style.color='#FF5733';
