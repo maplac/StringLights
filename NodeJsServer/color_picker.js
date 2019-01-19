@@ -1,22 +1,23 @@
 bg={};sR={};sG={};sB={};
 
+
 function setBG(){
 	c=[sR.value.toString(),sG.value.toString(),sB.value.toString()];
 	bg.style.backgroundColor='rgb('+c[0]+','+c[1]+','+c[2]+')';
-	colorChanged();
+	if (typeof colorChanged == "function"){
+		colorChanged();
+	}
 }
 
 function setEL(s, t){
 	s.addEventListener("change", function(){
 	t.value=s.value;
-	Cindex = 100;
 	setBG();
 	},false);
 	t.addEventListener("change", function(){
 	if(t.value>255)t.value=255;
 	if(t.value<0)t.value=0;
 	s.value=t.value;
-	Cindex = 100;
 	setBG();
 	},false);
 }
@@ -41,7 +42,6 @@ function clickedLoad(but){
 	tR.value=c[0];
 	tG.value=c[1];
 	tB.value=c[2];
-	Cindex = id;
 	setBG();
 }
 
@@ -71,12 +71,15 @@ function clickedSave(but){
 	C[id][1]=c[1];
 	C[id][2]=c[2];
 	document.getElementById('sp'+id).style.backgroundColor='rgb('+c[0]+','+c[1]+','+c[2]+')';
-	if (isColorLight(C[i])) {
+	if (isColorLight(C[id])) {
 		document.getElementById('sp'+id).style.color='#1a1a1a';
 	}else{
 		document.getElementById('sp'+id).style.color='#FF5733';
 	}
 	sendPost("color-picker","type=save&id="+id+"&r="+c[0]+"&g="+c[1]+"&b="+c[2]);
+	if (typeof savedColorChanged == "function"){
+		savedColorChanged(id);
+	}
 }
 
 function clickedRename(but){
@@ -88,12 +91,25 @@ function clickedRename(but){
 	if(res === null || res === ""){	return;}
 	if(res.length > 12){ res = res.substring(0,12);}
 	document.getElementById('sp'+id).innerHTML = res;
+	names[id] = res;
 	sendPost("color-picker","type=rename&id="+id+"&name="+res);
+		if (typeof savedColorChanged == "function"){
+		savedColorChanged(id);
+	}
 }
 function byteToString(num){
 	var str = num+"";
 	while(str.length < 3) str = "0"+str;
 	return str;
+}
+
+function savedColorIndex(color){
+	for(var i=0;i<C.length;i++){
+		if(C[i][0] == color[0] && C[i][1] == color[1] && C[i][2] == color[2]){
+			return i;
+		}
+	}
+	return -1;
 }
 
 function loadColorPicker(){
@@ -132,24 +148,12 @@ function loadColorPicker(){
 	tR=document.getElementById('tR');
 	tG=document.getElementById('tG');
 	tB=document.getElementById('tB');
-	if(Cindex == 100){
-		sR.value=c[0];
-		sG.value=c[1];
-		sB.value=c[2];
-		tR.value=c[0];
-		tG.value=c[1];
-		tB.value=c[2];
-	}else{
-		c[0]=C[Cindex][0];
-		c[1]=C[Cindex][1];
-		c[2]=C[Cindex][2];
-		sR.value=c[0];
-		sG.value=c[1];
-		sB.value=c[2];
-		tR.value=c[0];
-		tG.value=c[1];
-		tB.value=c[2];
-	}
+	sR.value=c[0];
+	sG.value=c[1];
+	sB.value=c[2];
+	tR.value=c[0];
+	tG.value=c[1];
+	tB.value=c[2];
 	setEL(sR,tR);
 	setEL(sG,tG);
 	setEL(sB,tB);

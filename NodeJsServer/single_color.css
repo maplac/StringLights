@@ -1,19 +1,11 @@
-#selectedColor{
-  width:200px;
-  height:200px;
-  background-color: red;
-}
-
 
  /* The container must be positioned relative: */
-.custom-select {
+#custom-select {
   position: relative;
-  font-family: Arial;
+  width:200px;
+  /*font-family: Arial;*/
 }
 
-.custom-select select {
-  display: none; /*hide original SELECT element: */
-}
 
 .select-selected {
   /*background-color: DodgerBlue;*/
@@ -50,7 +42,7 @@
 .select-items {
   overflow:auto;
   height: calc(100vh - 118px);
-  max-height: 1140px;
+  max-height: 1240px;
   position: absolute;
   /*background-color: DodgerBlue;*/
   top: 100%;
