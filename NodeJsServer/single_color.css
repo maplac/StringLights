@@ -3,12 +3,6 @@
 #custom-select {
   position: relative;
   width:200px;
-  /*font-family: Arial;*/
-}
-
-
-.select-selected {
-  /*background-color: DodgerBlue;*/
 }
 
 /* Style the arrow inside the select element: */

@@ -1,35 +1,27 @@
 function colorChanged(){
 	repaintSelected();
-	sendPost("single-color","type=color&"+"&r="+c[0]+"&g="+c[1]+"&b="+c[2]);
-	//sendPost("color-picker","type=color&"+"&r="+c[0]+"&g="+c[1]+"&b="+c[2]);
+	sendPost("single-color","type=color&"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
+	//sendPost("color-picker","type=color&"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
 }
 
 function savedColorChanged(id){
 	var a = document.getElementById("sel_"+id);
-	a.style.backgroundColor = 'rgb('+C[id][0]+','+C[id][1]+','+C[id][2]+')';
-	if (isColorLight(C[id])) {
-		a.style.color='#1a1a1a';
-	}else{
-		a.style.color='#FF5733';
-	}
-	a.innerHTML = names[id];
+	a.style.backgroundColor = 'rgb('+cp.C[id][0]+','+cp.C[id][1]+','+cp.C[id][2]+')';
+	a.style.color=getTextColor(cp.C[id]);
+	a.innerHTML = cp.names[id];
 	repaintSelected();
 }
 
 function repaintSelected(){
 	var x = document.getElementById('sel_selected');
-	var colorIndex = savedColorIndex(c);
+	var colorIndex = savedColorIndex(cp.c);
 	if(colorIndex >= 0){
-		x.innerHTML = names[colorIndex];
+		x.innerHTML = cp.names[colorIndex];
 	}else{
 		x.innerHTML = "-";
 	}
-	x.style.backgroundColor='rgb('+c[0]+','+c[1]+','+c[2]+')';
-	if (isColorLight(c)) {
-		x.style.color = '#1a1a1a';
-	}else{
-		x.style.color = '#FF5733';
-	}
+	x.style.backgroundColor='rgb('+cp.c[0]+','+cp.c[1]+','+cp.c[2]+')';
+	x.style.color = getTextColor(cp.c);
 }
 
 function loadSingleColor(){
@@ -41,15 +33,11 @@ function loadSingleColor(){
 	a = document.createElement("DIV");
 	a.setAttribute("class", "select-selected");
 	a.setAttribute("id", "sel_selected");
-	a.style.backgroundColor='rgb('+Sc[0]+','+Sc[1]+','+Sc[2]+')';
-	if (isColorLight(Sc)) {
-		a.style.color='#1a1a1a';
-	}else{
-		a.style.color='#FF5733';
-	}
-	var colorIndex = savedColorIndex(Sc);
+	a.style.backgroundColor='rgb('+cp.c[0]+','+cp.c[1]+','+cp.c[2]+')';
+	a.style.color=getTextColor(cp.c);
+	var colorIndex = savedColorIndex(cp.c);
 	if(colorIndex >= 0){
-		a.innerHTML = names[colorIndex];
+		a.innerHTML = cp.names[colorIndex];
 	}else{
 		a.innerHTML = "-";
 	}
@@ -65,16 +53,12 @@ function loadSingleColor(){
 	// items in the option list
 	b = document.createElement("DIV");
 	b.setAttribute("class", "select-items select-hide");
-	for(var i=0;i<C.length;i++){
+	for(var i=0;i<cp.C.length;i++){
 		c = document.createElement("DIV");
 		c.setAttribute("id", "sel_"+i);
-		c.style.backgroundColor = 'rgb('+C[i][0]+','+C[i][1]+','+C[i][2]+')';
-		if (isColorLight(C[i])) {
-			c.style.color='#1a1a1a';
-		}else{
-			c.style.color='#FF5733';
-		}
-		c.innerHTML = names[i];
+		c.style.backgroundColor = 'rgb('+cp.C[i][0]+','+cp.C[i][1]+','+cp.C[i][2]+')';
+		c.style.color=getTextColor(cp.C[i]);
+		c.innerHTML = cp.names[i];
 		b.appendChild(c);
 	}
 	// add event listener for clicking on an item in the list
