@@ -72,6 +72,10 @@ function loadSingleColor(){
 }
 
 window.onload=function(){
+  cp=JSON.parse(cpstr);
+  var scTemp = JSON.parse(scstr);
+  sc = scTemp.sc;
+  cp.c = sc;
   loadColorPicker();
   loadSingleColor();
 }

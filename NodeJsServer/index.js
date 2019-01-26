@@ -11,9 +11,11 @@ http.send(params);*/
 }
 
 function colorChanged(){
-	sendPost("index","type=color&"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
+	sendPost("index","type=color"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
 }
 
 window.onload=function(){
+	cp=JSON.parse(cpstr);
+	cp.c = cp.C[0];
 	loadColorPicker();
 }

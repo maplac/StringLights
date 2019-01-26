@@ -8,9 +8,10 @@
 #include <FS.h>   //Include File System Headers
 #include <ESP8266mDNS.h>
 #include <NeoPixelBus.h>
+#include <ArduinoJson.h>
 
-const char* imagefile = "/lenna.png";
-const char* htmlfile = "/index.html";
+#define SAVED_COLORS_COUNT  30
+#define COLOR_NAME_LENGTH   12
 
 //ESP AP Mode configuration
 const char *ssid = "Tenda";
@@ -26,8 +27,110 @@ RgbColor green(0, colorSaturation, 0);
 RgbColor blue(0, 0, colorSaturation);
 RgbColor white(colorSaturation);
 RgbColor black(0);
-
 ESP8266WebServer server(80);
+
+unsigned char savedColors[SAVED_COLORS_COUNT][3] ;
+char savedNames[SAVED_COLORS_COUNT][COLOR_NAME_LENGTH];
+
+void loadSettings(){
+  Serial.println("Loading settings");
+
+  /*savedColors[0][0] = 10;
+  savedColors[0][1] = 20;
+  savedColors[0][2] = 30;
+  savedColors[1][0] = 110;
+  savedColors[1][1] = 120;
+  savedColors[1][2] = 130;
+  for(int i=0; i<SAVED_COLORS_COUNT;i++){
+    strcpy(savedNames[i], "-");  
+  }
+  strcpy(savedNames[0], "zero");
+  strcpy(savedNames[1], "one");
+  
+  saveColorPickerSettings();*/
+    
+  File file = SPIFFS.open("/color_picker_settings.js", "r");
+  if (!file) {
+      Serial.println("Opening color_picker_settings.js failed.");
+      return;
+  }
+  size_t size = file.size();
+  if (size > 1024) {
+    Serial.println("color_picker_settings is too large");
+    return;
+  }
+  
+  if(!file.seek(7)){
+    Serial.println("seek failed");
+    return;
+  }
+  size -= 8;
+  
+  // Allocate a buffer to store contents of the file.
+  std::unique_ptr<char[]> buf(new char[size+1]);
+
+  // We don't use String here because ArduinoJson library requires the input
+  // buffer to be mutable. If you don't use ArduinoJson, you may as well
+  // use configFile.readString instead.
+  file.readBytes(buf.get(), size);
+  file.close();
+  buf.get()[size] = 0;
+
+  /*for(int i = 0; i < size; i++){
+    Serial.write(buf.get()[i]);
+  }
+  Serial.println("");*/
+  
+  //char str[] = "{\"q\":[1,2,3],\"C\":[[11,22,33],[111,222,333]],\"names\":[\"jedna\",\"dva\",\"-\"]}";
+  //StaticJsonBuffer<1000> jsonBuffer;
+  DynamicJsonBuffer jsonBuffer(1000);
+  JsonObject& json = jsonBuffer.parseObject(buf.get());
+
+  if (!json.success()) {
+    Serial.println("Failed to parse color_picker_settings.js file");
+    return;
+  }
+  /*
+  const char* name = json["names"][0];
+  unsigned char r = json["C"][0][0];
+  unsigned char g = json["C"][0][1];
+  unsigned char b = json["C"][0][2];
+  Serial.print("name: "); Serial.println(name);
+  Serial.print(r);Serial.print(", ");
+  Serial.print(g);Serial.print(", ");
+  Serial.println(b);
+ */
+}
+
+bool saveColorPickerSettings(){
+  File file = SPIFFS.open("/color_picker_settings.js", "w");
+  if (!file) {
+      Serial.println("Opening color_picker_settings.js failed.");
+      return false;
+  }
+  file.print("cpstr='{\"c\":[0,0,0],\"C\":[");
+  for(int i = 0; i < SAVED_COLORS_COUNT; i++){
+    file.print("[");
+    file.print(String(savedColors[i][0]));file.print(",");
+    file.print(String(savedColors[i][1]));file.print(",");
+    file.print(String(savedColors[i][2]));file.print("]");
+    if( i < (SAVED_COLORS_COUNT - 1)){
+      file.print(",");
+    }
+  }
+  file.print("],\"names\":[");
+  for(int i = 0; i < SAVED_COLORS_COUNT; i++){
+    file.print("\"");
+    file.print(String(savedNames[i]));
+    file.print("\"");
+    if( i < (SAVED_COLORS_COUNT - 1)){
+      file.print(",");
+    }
+  }
+  file.print("]}'");  
+  file.close();
+  return true;
+}
 
 void handleRoot(){
   Serial.println("Handling root.");
@@ -53,29 +156,6 @@ void handleWebRequests(){
   Serial.println(message);
 }
 
-void handleLedGet(){
-  Serial.println("Handling LED get.");
-
-  if(server.hasArg("r") && server.hasArg("g") && server.hasArg("b")){
-    int r = server.arg("r").toInt();
-    int g = server.arg("g").toInt();
-    int b = server.arg("b").toInt();
-    Serial.print("r=");  Serial.print(r);
-    Serial.print(", g=");  Serial.print(g);
-    Serial.print(", b=");  Serial.println(b);
-    for(int i = 0; i < ledCount; ++i){
-      strip.SetPixelColor(i, RgbColor(r,g,b));
-    }
-    strip.Show();
-  }
-  
-  
-  digitalWrite(led,!digitalRead(led));      // Change the state of the LED
-  //server.sendHeader("Location","/");        // Add a header to respond with a new location for the browser to go to the home page again
-  //server.send(303);                         // Send it back to the browser with an HTTP status 303 (See Other) to redirect
-  server.send(200,"text/html", "OK");
-}
-
 void handleIndex(){
   Serial.println("Handling Index");
   if(server.hasArg("type")){
@@ -84,10 +164,8 @@ void handleIndex(){
       if(server.hasArg("cmd")){
         if(server.arg("cmd") == "on"){
           digitalWrite(led,1);
-          server.send(200,"text/html", "OK");
         }else if(server.arg("cmd") == "off"){
           digitalWrite(led,0);
-          server.send(200,"text/html", "OK");
         }else{
           server.send(400,"text/html", "unknown cmd");  
         }
@@ -98,6 +176,7 @@ void handleIndex(){
   }else{
     server.send(400,"text/html", "type is missing");
   }
+  server.send(200,"text/html", "OK");
 }
 
 void handleSingleColor(){
@@ -111,11 +190,30 @@ void handleSingleColor(){
       Serial.print("single color: ");  Serial.print(r);
       Serial.print(", ");  Serial.print(g);
       Serial.print(", ");  Serial.println(b);
+
+      File file = SPIFFS.open("/single_color_settings.js", "w");
+      if (!file) {
+          Serial.println("Opening failed.");
+          server.send(400,"text/html", "file open failed");
+          return;
+      }
+      file.print("scstr='{\"sc\":[");
+      file.print(server.arg("r"));file.print(",");
+      file.print(server.arg("g"));file.print(",");
+      file.print(server.arg("b"));file.print("]}'");
+      file.close();
+
+      File f = SPIFFS.open("/single_color_settings.js", "r");
+      if (!f) {
+          Serial.println("Opening for read failed.");
+          return;
+      }
+     
       for(int i = 0; i < ledCount; ++i){
         strip.SetPixelColor(i, RgbColor(r,g,b));
        }
       strip.Show();
-       // todo
+      
       }else{
         server.send(400,"text/html", "r/g/b/ is missing");
       }
@@ -135,25 +233,43 @@ void handleColorPicker(){
     if(server.hasArg("id")){
       int id = server.arg("id").toInt();
       Serial.println("id: " + server.arg("id"));
-      if(server.arg("type") == "rename"){
-        if(server.hasArg("name")){
-          String newName = server.arg("name");
-          Serial.println("new name: " + newName);
-          // todo
+      if(id < SAVED_COLORS_COUNT){
+        if(server.arg("type") == "rename"){
+          if(server.hasArg("name")){
+            String newName = server.arg("name");
+            Serial.println("new name: " + newName);
+
+            newName.toCharArray(savedNames[id], COLOR_NAME_LENGTH);
+
+            if(!saveColorPickerSettings()){
+              server.send(400,"text/html", "saving to file failed");
+            }
+            
+          }else{
+            server.send(400,"text/html", "name is missing");
+          }
+        }else if(server.arg("type") == "save"){
+          if(server.hasArg("r") && server.hasArg("g") && server.hasArg("b")){
+            int r = server.arg("r").toInt();
+            int g = server.arg("g").toInt();
+            int b = server.arg("b").toInt();
+            Serial.print("new color: ");  Serial.print(r);
+            Serial.print(", ");  Serial.print(g);
+            Serial.print(", ");  Serial.println(b);
+            
+            savedColors[id][0] = (unsigned char) r;
+            savedColors[id][1] = (unsigned char) g;
+            savedColors[id][2] = (unsigned char) b;
+
+            if(!saveColorPickerSettings()){
+              server.send(400,"text/html", "saving to file failed");
+            }
+                      
+          }else{
+            server.send(400,"text/html", "r/g/b/ is missing");
+          }
         }else{
-          server.send(400,"text/html", "name is missing");
-        }
-      }else if(server.arg("type") == "save"){
-        if(server.hasArg("r") && server.hasArg("g") && server.hasArg("b")){
-          int r = server.arg("r").toInt();
-          int g = server.arg("g").toInt();
-          int b = server.arg("b").toInt();
-          Serial.print("new color: ");  Serial.print(r);
-          Serial.print(", ");  Serial.print(g);
-          Serial.print(", ");  Serial.println(b);
-          // todo
-        }else{
-          server.send(400,"text/html", "r/g/b/ is missing");
+          server.send(400,"text/html", "id out of range");
         }
       }else{
          server.send(400,"text/html", "unknown type");
@@ -178,6 +294,8 @@ void setup() {
   //Initialize File System
   SPIFFS.begin();
   Serial.println("File System Initialized");
+
+  loadSettings();
   /*
   //Initialize AP Mode
   WiFi.softAP(ssid);  //Password not used
@@ -207,12 +325,13 @@ void setup() {
 */
   //Initialize Webserver
   server.on("/",handleRoot);
-  server.on("/LED", HTTP_GET, handleLedGet);
-  server.on("/index", HTTP_POST, handleIndex);
+    server.on("/index", HTTP_POST, handleIndex);
   server.on("/single-color", HTTP_POST, handleSingleColor);
-  server.on("/color-picker", HTTP_POST, handleColorPicker);// color picker
-  server.onNotFound(handleWebRequests); //Set setver all paths are not found so we can handle as per URI
-  server.begin();  
+  server.on("/color-picker", HTTP_POST, handleColorPicker);
+  //server.on("/color_picker_settings.js", HTTP_GET, handleColorPickerSettings);
+  //server.on("/single_color_settings.js", HTTP_GET, handleSingleColorSettings);
+  server.onNotFound(handleWebRequests);
+  server.begin();
   Serial.println("HTTP server started");
 
   strip.Begin();
@@ -254,7 +373,7 @@ bool loadFromSpiffs(String path){
   File dataFile = SPIFFS.open(path.c_str(), "r");
 
   if (!dataFile) {
-      Serial.print("Opening failed.");
+      Serial.println("Opening failed.");
   }else{
     Serial.println();
   }
@@ -266,3 +385,14 @@ bool loadFromSpiffs(String path){
   dataFile.close();
   return true;
 }
+
+/*
+ulozeni, zmena jmena, nacteni/zmena (index), nacteni/zmena (single-color)
+POST 
+
+
+*/
+
+
+
+ 

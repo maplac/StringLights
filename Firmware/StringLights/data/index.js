@@ -15,5 +15,7 @@ function colorChanged(){
 }
 
 window.onload=function(){
+	cp=JSON.parse(cpstr);
+	cp.c = cp.C[0];
 	loadColorPicker();
 }

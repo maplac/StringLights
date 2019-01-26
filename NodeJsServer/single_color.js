@@ -1,6 +1,6 @@
 function colorChanged(){
 	repaintSelected();
-	sendPost("single-color","type=color&"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
+	sendPost("single-color","type=color"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
 	//sendPost("color-picker","type=color&"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
 }
 
@@ -72,6 +72,10 @@ function loadSingleColor(){
 }
 
 window.onload=function(){
+  cp=JSON.parse(cpstr);
+  var scTemp = JSON.parse(scstr);
+  sc = scTemp.sc;
+  cp.c = sc;
   loadColorPicker();
   loadSingleColor();
 }
