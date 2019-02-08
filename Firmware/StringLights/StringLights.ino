@@ -5,7 +5,7 @@
 
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
-#include <FS.h>   //Include File System Headers
+#include <FS.h>   
 #include <ESP8266mDNS.h>
 #include <NeoPixelBus.h>
 #include <ArduinoJson.h>
@@ -18,7 +18,7 @@ const char *ssid = "Tenda";
 const char *password = "unstuckunstuck";
 
 const int led = 13;
-const int ledCount = 4;
+const int ledCount = 20;
 
 #define colorSaturation 128
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod > strip(ledCount);
@@ -31,24 +31,13 @@ ESP8266WebServer server(80);
 
 unsigned char savedColors[SAVED_COLORS_COUNT][3] ;
 char savedNames[SAVED_COLORS_COUNT][COLOR_NAME_LENGTH];
+unsigned char singleColor[3];
 
+//=============================================================================================
 void loadSettings(){
   Serial.println("Loading settings");
 
-  /*savedColors[0][0] = 10;
-  savedColors[0][1] = 20;
-  savedColors[0][2] = 30;
-  savedColors[1][0] = 110;
-  savedColors[1][1] = 120;
-  savedColors[1][2] = 130;
-  for(int i=0; i<SAVED_COLORS_COUNT;i++){
-    strcpy(savedNames[i], "-");  
-  }
-  strcpy(savedNames[0], "zero");
-  strcpy(savedNames[1], "one");
-  
-  saveColorPickerSettings();*/
-    
+  //---------------------------------------------------------------------
   File file = SPIFFS.open("/color_picker_settings.js", "r");
   if (!file) {
       Serial.println("Opening color_picker_settings.js failed.");
@@ -57,11 +46,13 @@ void loadSettings(){
   size_t size = file.size();
   if (size > 1024) {
     Serial.println("color_picker_settings is too large");
+    file.close();
     return;
   }
   
   if(!file.seek(7)){
     Serial.println("seek failed");
+    file.close();
     return;
   }
   size -= 8;
@@ -74,6 +65,7 @@ void loadSettings(){
   // use configFile.readString instead.
   file.readBytes(buf.get(), size);
   file.close();
+  
   buf.get()[size] = 0;
 
   /*for(int i = 0; i < size; i++){
@@ -84,24 +76,59 @@ void loadSettings(){
   //char str[] = "{\"q\":[1,2,3],\"C\":[[11,22,33],[111,222,333]],\"names\":[\"jedna\",\"dva\",\"-\"]}";
   //StaticJsonBuffer<1000> jsonBuffer;
   DynamicJsonBuffer jsonBuffer(1000);
+
   JsonObject& json = jsonBuffer.parseObject(buf.get());
 
   if (!json.success()) {
     Serial.println("Failed to parse color_picker_settings.js file");
     return;
   }
-  /*
-  const char* name = json["names"][0];
-  unsigned char r = json["C"][0][0];
-  unsigned char g = json["C"][0][1];
-  unsigned char b = json["C"][0][2];
-  Serial.print("name: "); Serial.println(name);
-  Serial.print(r);Serial.print(", ");
-  Serial.print(g);Serial.print(", ");
-  Serial.println(b);
- */
-}
 
+  for(int i = 0; i < SAVED_COLORS_COUNT; ++i){
+    savedColors[i][0] = json["C"][i][0];
+    savedColors[i][1] = json["C"][i][1];
+    savedColors[i][2] = json["C"][i][2];
+    String newName = json["names"][i];
+    newName.toCharArray(savedNames[i], COLOR_NAME_LENGTH);
+    //savedNames[i][newName.length()] = '\0';
+  }
+
+  //---------------------------------------------------------------------
+  file = SPIFFS.open("/single_color_settings.js", "r");
+  if (!file) {
+      Serial.println("Opening color_picker_settings.js failed.");
+      return;
+  }
+  size = file.size();
+  if (size > 1024) {
+    Serial.println("single_color_settings is too large");
+    file.close();
+    return;
+  }
+  
+  if(!file.seek(7)){
+    Serial.println("seek failed");
+    file.close();
+    return;
+  }
+  size -= 8;
+  
+  //std::unique_ptr<char[]> buf(new char[size+1]);
+
+  file.readBytes(buf.get(), size);
+  file.close();
+  
+  buf.get()[size] = 0;
+  JsonObject& json2 = jsonBuffer.parseObject(buf.get());
+  if (!json2.success()) {
+    Serial.println("Failed to parse single_color_settings.js file");
+    return;
+  }
+  singleColor[0] = json2["sc"][0];
+  singleColor[1] = json2["sc"][1];
+  singleColor[2] = json2["sc"][2];
+}
+//=============================================================================================
 bool saveColorPickerSettings(){
   File file = SPIFFS.open("/color_picker_settings.js", "w");
   if (!file) {
@@ -132,14 +159,16 @@ bool saveColorPickerSettings(){
   return true;
 }
 
+//=============================================================================================
 void handleRoot(){
   Serial.println("Handling root.");
   server.sendHeader("Location", "/index.html",true);   //Redirect to our html web page
   server.send(302, "text/plane","");
 }
 
+//=============================================================================================
 void handleWebRequests(){
-  Serial.println("Handling WebRequests.");
+  //Serial.println("Handling WebRequests.");
   if(loadFromSpiffs(server.uri())) return;
   String message = "File Not Detected\n\n";
   message += "URI: ";
@@ -156,6 +185,7 @@ void handleWebRequests(){
   Serial.println(message);
 }
 
+//=============================================================================================
 void handleIndex(){
   Serial.println("Handling Index");
   if(server.hasArg("type")){
@@ -179,6 +209,7 @@ void handleIndex(){
   server.send(200,"text/html", "OK");
 }
 
+//=============================================================================================
 void handleSingleColor(){
   Serial.println("Handling SingleColor");
   if(server.hasArg("type")){
@@ -202,12 +233,10 @@ void handleSingleColor(){
       file.print(server.arg("g"));file.print(",");
       file.print(server.arg("b"));file.print("]}'");
       file.close();
-
-      File f = SPIFFS.open("/single_color_settings.js", "r");
-      if (!f) {
-          Serial.println("Opening for read failed.");
-          return;
-      }
+      
+      singleColor[0] = (unsigned char) (r & 0xFF);
+      singleColor[1] = (unsigned char) (g & 0xFF);
+      singleColor[2] = (unsigned char) (b & 0xFF);
      
       for(int i = 0; i < ledCount; ++i){
         strip.SetPixelColor(i, RgbColor(r,g,b));
@@ -226,6 +255,7 @@ void handleSingleColor(){
   server.send(200,"text/html", "OK");
 }
 
+//=============================================================================================
 void handleColorPicker(){
   Serial.println("Handling ColorPicker");
 
@@ -238,9 +268,8 @@ void handleColorPicker(){
           if(server.hasArg("name")){
             String newName = server.arg("name");
             Serial.println("new name: " + newName);
-
             newName.toCharArray(savedNames[id], COLOR_NAME_LENGTH);
-
+            //savedNames[id][newName.length()] = '\0';
             if(!saveColorPickerSettings()){
               server.send(400,"text/html", "saving to file failed");
             }
@@ -264,7 +293,6 @@ void handleColorPicker(){
             if(!saveColorPickerSettings()){
               server.send(400,"text/html", "saving to file failed");
             }
-                      
           }else{
             server.send(400,"text/html", "r/g/b/ is missing");
           }
@@ -283,6 +311,7 @@ void handleColorPicker(){
   server.send(200,"text/html", "OK");
 }
 
+//=============================================================================================
 void setup() {
   delay(1000);
   Serial.begin(115200);
@@ -325,7 +354,7 @@ void setup() {
 */
   //Initialize Webserver
   server.on("/",handleRoot);
-    server.on("/index", HTTP_POST, handleIndex);
+  server.on("/index", HTTP_POST, handleIndex);
   server.on("/single-color", HTTP_POST, handleSingleColor);
   server.on("/color-picker", HTTP_POST, handleColorPicker);
   //server.on("/color_picker_settings.js", HTTP_GET, handleColorPickerSettings);
@@ -335,20 +364,21 @@ void setup() {
   Serial.println("HTTP server started");
 
   strip.Begin();
-  strip.SetPixelColor(0, red);
-  strip.SetPixelColor(1, green);
-  strip.SetPixelColor(2, blue);
-  strip.SetPixelColor(3, white);
+  for(int i = 0; i < ledCount; ++i){
+    strip.SetPixelColor(i, RgbColor(singleColor[0],singleColor[1],singleColor[2]));
+  }
   strip.Show();
 
   //MDNS.addService("http", "tcp", 80);
 }
 
+//=============================================================================================
 void loop() {
   //MDNS.update();
   server.handleClient();
 }
 
+//=============================================================================================
 bool loadFromSpiffs(String path){
   String dataType = "text/plain";
   if(path.endsWith("/")) path += "index.htm";
@@ -385,13 +415,6 @@ bool loadFromSpiffs(String path){
   dataFile.close();
   return true;
 }
-
-/*
-ulozeni, zmena jmena, nacteni/zmena (index), nacteni/zmena (single-color)
-POST 
-
-
-*/
 
 
 
