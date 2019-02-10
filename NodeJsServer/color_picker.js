@@ -23,7 +23,8 @@ function setEL(s, t){
 }
 
 function setRanges(){
-	var inputs=document.getElementsByTagName('input');
+	var a = document.getElementById('color_menu_top');
+	var inputs=a.getElementsByTagName('input');
 	for(var i=0;i<inputs.length;i++){
 	inputs[i].min=0;
 	inputs[i].max=255;

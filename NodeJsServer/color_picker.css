@@ -10,12 +10,15 @@ background: rgba(100,255,100,0.7);
 .blu{
 background: rgba(100,100,255,0.7);
 }
-input[type="range"]{
+
+#color_menu_top input[type="range"]{
 width: 200px;
 }
-input[type="number"]{
+
+#color_menu_top input[type="number"]{
 width: 45px;
 }
+
 #bg{
   margin: 0 5px 0px 3px;
 }
@@ -29,21 +32,16 @@ width: 193px;
 vertical-align: middle;
 font-weight: bold;
 }
-.but{
- 
-}
-table{
+
+#color_menu table{
   /*padding:0px;*/
   margin-top:0px;
   border:0px;
   border-spacing: 5px;
   border-collapse: collapse;
 }
-tr{
-/*  padding:5px;
-  margin:0px;*/
-}
-td{
+
+#color_menu td{
   padding:3px;
   /*margin:0px;*/
 }

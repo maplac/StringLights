@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet"href="styles.css">
+  <link rel="stylesheet"href="multi_color.css">
+  <link rel="stylesheet"href="color_picker.css">
+  <script type="text/javascript"src="color_picker_settings.js"></script>
+  <script type="text/javascript"src="color_picker.js"></script>
+  <script type="text/javascript"src="multi_color_settings.js"></script>
+  <script type="text/javascript"src="multi_color.js"></script>
+  <title>String Lights</title>
+</head>
+<body>
+ 
+  <div id="left_column">
+    <div id="header">
+      <span>String Lights</span>
+    </div>
+	<div id="color_menu_top"></div>
+    <div id="color_menu">
+      
+    </div>
+  </div>
+  <div>
+    <div id="top_menu">
+      <a href="index.html">Home</a>
+      <a href="single_color.html">Single Color</a>
+	  <a class="selectedMenu"href="multi_color.html">Multi Color</a>
+    </div>
+    <div id="content">
+	  <div><button onclick="clickedAdd()">Add</button><button onclick="clickedRemove()">Remove</button></div>
+	  <div><button onclick="clickedSelectAll()">Select all</button><button onclick="clickedSelectNone()">Select none</button><button onclick="clickedSelectInvert()">Select invert</button><button onclick="clickedSelectN()">Select every N</button><input type="number" min="1" max="999" value="2" id="select_n_number"></div>
+	  <div id="color_list">
+	    <div id="coloritem_0" class="color_item">
+		  <span class="color_item_num">1</span><input type="checkbox" class="color_item_check"><span class="color_item_name">123 456 789</span>
+		</div>
+	    <div id="coloritem_1" class="color_item">
+		  <span class="color_item_num">222</span><input type="checkbox" class="color_item_check"><span class="color_item_name">789 456 123</span>
+		</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
