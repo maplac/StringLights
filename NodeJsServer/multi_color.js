@@ -1,7 +1,55 @@
+var history={};
+history.mc = [];
+history.selected = [];
+
+
 function colorChanged(){
-	//repaintSelected();
 	sendPost("multi-color","type=color"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
+	setColor();
 	//sendPost("color-picker","type=color&"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
+}
+
+function setColor(){
+	
+	var a = document.getElementById("color_list");
+	var b = a.getElementsByClassName("color_item_check");
+	var c = a.getElementsByClassName("color_item_name");
+	
+	if((b.length !== c.length) && (c.length !== mc.length)){
+		console.log("Error setColor(): length doesn't match");
+		return;
+	}
+	
+	var selected = [];
+		
+	// get all checked items
+	for(var i = 0; i < b.length; i++){
+		if(b[i].checked === true){
+			selected.push(i);
+		}
+	}
+	
+	if(selected.length === 0){
+		return;
+	}
+	
+	saveHistory();
+	
+	for(var i = 0; i < selected.length; i++){
+		var index = selected[i];
+		//console.log("setColor(): checked index " + i);
+		mc[index] = Array.from(cp.c);
+		c[index].style.backgroundColor='rgb('+cp.c[0]+','+cp.c[1]+','+cp.c[2]+')';
+		c[index].style.color=getTextColor(cp.c);
+		var colorIndex = savedColorIndex(cp.c);
+		if(colorIndex >= 0){
+			c[index].innerHTML = cp.names[colorIndex];
+		}else{
+			c[index].innerHTML = ".";
+			c[index].style.color='rgb('+cp.c[0]+','+cp.c[1]+','+cp.c[2]+')';
+		}
+	}
+
 }
 
 function clickedAdd(){
@@ -16,10 +64,16 @@ function clickedAdd(){
 		}
 	}
 	
+	if(selected.length === 0){
+		return;
+	}
+	
+	saveHistory();
+	
 	// insert new items
 	for( var i = 0; i < selected.length; i++){
 		selected[i] += i;
-		mc.splice(selected[i]+1, 0, [cp.c[0], cp.c[1], cp.c[2]]);
+		mc.splice(selected[i]+1, 0, Array.from(cp.c));
 	}
 	
 	// create new color_list
@@ -28,7 +82,7 @@ function clickedAdd(){
 	// recheck items
 	b = a.getElementsByClassName("color_item_check");
 	for( var i = 0; i < selected.length; i++){
-		b[selected[i]].checked = true;
+		b[selected[i] + 1].checked = true;
 	}
 }
 
@@ -36,13 +90,24 @@ function clickedRemove(){
 	var a = document.getElementById("color_list");
 	var b = a.getElementsByClassName("color_item_check");
 	var selected = [];
-	
+		
 	// get all checked items
 	for(var i = 0; i < b.length; i++){
 		if(b[i].checked === true){
 			selected.push(i);
 		}
 	}
+	
+	if(selected.length === b.length){
+		console.log("Error clickedRemove(): cannot remove all.");
+		return;
+	}
+
+	if(selected.length === 0){
+		return;
+	}
+	
+	saveHistory();
 	
 	// remove items
 	for( var i = 0; i < selected.length; i++){
@@ -56,7 +121,47 @@ function clickedRemove(){
 	// recheck items
 	b = a.getElementsByClassName("color_item_check");
 	for( var i = 0; i < selected.length; i++){
-		b[selected[i]].checked = true;
+		if(selected[i] < b.length){
+			b[selected[i]].checked = true;
+		}
+	}
+}
+
+function clickedUndo(){
+	document.getElementById("but_undo").disabled = true;
+	
+	mc = [];
+	for(var i = 0; i < history.mc.length; i++){
+		mc.push(Array.from(history.mc[i]));
+	}
+	
+	createColorList();
+	
+	var a = document.getElementById("color_list");
+	var b = a.getElementsByClassName("color_item_check");
+	
+	for(var i = 0; i < history.selected.length; i++){
+		b[history.selected[i]].checked = true;
+	}
+}
+
+function saveHistory(){
+	
+	document.getElementById("but_undo").disabled = false;
+	
+	history.mc = [];
+	for(var i = 0; i < mc.length; i++){
+		history.mc.push(Array.from(mc[i]));
+	}
+	
+	var a = document.getElementById("color_list");
+	var b = a.getElementsByClassName("color_item_check");
+	
+	history.selected = [];
+	for(var i = 0; i < b.length; i++){
+		if(b[i].checked === true){
+			history.selected.push(i);
+		}
 	}
 }
 
@@ -92,13 +197,20 @@ function clickedSelectN(){
 	var a = document.getElementById("color_list");
 	var b = a.getElementsByClassName("color_item_check");
 	var c = document.getElementById("select_n_number");
+	var d = document.getElementById("select_n_offset");
 	var N = c.value;
+	var offset = d.value;
+	
 	for(var i = 0; i < b.length; i++){
-		if((i % N) === 0){
-			b[i].checked = true;
-		}else{
+		if(i < offset){
 			b[i].checked = false;
-		}
+		}else{
+			if(((i-offset) % N) === 0){
+				b[i].checked = true;
+			}else{
+				b[i].checked = false;
+			}
+		}	
 	}
 }
 
@@ -146,8 +258,20 @@ window.onload=function(){
   cp=JSON.parse(cpstr);
   var mcTemp = JSON.parse(mcstr);
   mc = mcTemp.mc;
-  cp.c = mc[0];
+  cp.c = Array.from(mc[0]);
   loadColorPicker();
   createColorList();
+  
+  saveHistory();
+  document.getElementById("but_undo").disabled = true;
+  
+  var a = document.getElementById("select_n_number");
+  a.addEventListener("change", function(){
+    clickedSelectN();
+  },false);
+  a = document.getElementById("select_n_offset");
+  a.addEventListener("change", function(){
+    clickedSelectN();
+  },false);
 }
 

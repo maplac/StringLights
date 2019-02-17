@@ -30,7 +30,11 @@ app.post('/single-color', function(req, res){
 	console.log(req.body);
 	res.send('OK');
 });
-
+app.post('/multi-color', function(req, res){
+	console.log("Processing POST /multi-color");
+	console.log(req.body);
+	res.send('OK');
+});
 
 function exit() {
 	// free all resources

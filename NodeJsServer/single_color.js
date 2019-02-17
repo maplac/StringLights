@@ -56,6 +56,7 @@ function loadSingleColor(){
 	for(var i=0;i<cp.C.length;i++){
 		c = document.createElement("DIV");
 		c.setAttribute("id", "sel_"+i);
+		c.setAttribute("class", "unselectable");
 		c.style.backgroundColor = 'rgb('+cp.C[i][0]+','+cp.C[i][1]+','+cp.C[i][2]+')';
 		c.style.color=getTextColor(cp.C[i]);
 		c.innerHTML = cp.names[i];
@@ -75,7 +76,7 @@ window.onload=function(){
   cp=JSON.parse(cpstr);
   var scTemp = JSON.parse(scstr);
   sc = scTemp.sc;
-  cp.c = sc;
+  cp.c = Array.from(sc);
   loadColorPicker();
   loadSingleColor();
 }

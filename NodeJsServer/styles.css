@@ -21,6 +21,7 @@
 }
 #content button:hover:enabled {
 	background-color: #333;
+	cursor: pointer;
 }
 
 #left_column{
