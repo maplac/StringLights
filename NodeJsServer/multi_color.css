@@ -14,11 +14,8 @@
 .color_item {
 	height: 32px;
 	margin: 10px 10px 10px 7px;
-}
-
-.color_item input[type=checkbox] {
-  /*transform: scale(1.5);*/
-  width: 2em;
+	width: 300px;
+	/*cursor: pointer;*/
 }
 
 .color_item_num {
@@ -31,10 +28,11 @@
 	background-color: white;
 	display: inline-block;
 	width: 193px;
-	padding-left: 0.5em;
+	margin-left: 10px;
+	padding-left: 10px;
 	line-height: 30px;
-	height: 2em;
-	margin: auto;
+	height: 32px;
+	/*margin: auto;*/
 	/*position:absolute;*/
 }
 
@@ -51,4 +49,50 @@
 	margin-left: 7px;
 	margin-bottom: 7px;
 	border: 2px solid white;
+}
+
+/* Hide the browser's default checkbox */
+.color_item input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+/* Create a custom checkbox */
+.checkmark {
+  position: relative;
+  height: 28px;
+  width: 28px;
+  display: inline-block;
+  line-height: 28px;
+  border: solid white 2px;
+  background-color: #1a1a1a;
+  color: #1a1a1a;
+}
+
+/* Create the checkmark/indicator (hidden when not checked) */
+.checkmark:after {
+  content: "";
+  position: relative;
+  display: none;
+}
+
+/* Show the checkmark when checked */
+.color_item input:checked ~ .checkmark:after {
+  display: inline-block;
+}
+
+/* Style the checkmark/indicator */
+.color_item .checkmark:after {
+  left: 3px;
+  top: 0px;
+  width: 7px;
+  height: 14px;
+  border: solid #FF5733;
+  border-width: 0 4px 4px 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
 }

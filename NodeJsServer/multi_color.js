@@ -228,13 +228,18 @@ function createColorList(){
 		b.setAttribute("class", "color_item");
 		
 		var c = document.createElement("SPAN");
-		c.setAttribute("class", "color_item_num");
+		c.setAttribute("class", "color_item_num unselectable");
 		c.innerHTML = (i+1).toString();
 		b.appendChild(c);
 		
 		c = document.createElement("INPUT");
 		c.setAttribute("class", "color_item_check");
 		c.setAttribute("type", "checkbox");
+		b.appendChild(c);
+		
+		c = document.createElement("SPAN");
+		c.setAttribute("class", "checkmark unselectable");
+		c.innerHTML = ".";
 		b.appendChild(c);
 		
 		c = document.createElement("SPAN");
@@ -247,10 +252,14 @@ function createColorList(){
 		}else{
 			c.innerHTML = ".";
 			c.style.color='rgb('+mc[i][0]+','+mc[i][1]+','+mc[i][2]+')';
-			//c.classList.add("unselectable");
 		}
 		b.appendChild(c);
-		a.appendChild(b);
+		
+		// label makes the whole line clickable for (un)checking the checkbox
+		var d = document.createElement("LABEL");
+		d.appendChild(b);
+		a.appendChild(d);
+		
 	}
 }
 
