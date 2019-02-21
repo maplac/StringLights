@@ -214,6 +214,38 @@ function clickedSelectN(){
 	}
 }
 
+function clickedSelectNNumberMinus(){
+	var a = document.getElementById("select_n_number");
+	if (a.value > 1){
+		a.value = a.value - 1;
+		clickedSelectN();
+	}
+}
+
+function clickedSelectNNumberPlus(){
+	var a = document.getElementById("select_n_number");
+	if (a.value < 999){
+		a.value = parseInt(a.value) + 1;
+		clickedSelectN();
+	}
+}
+
+function clickedSelectNOffsetMinus(){
+	var a = document.getElementById("select_n_offset");
+	if (a.value > 0){
+		a.value = a.value - 1;
+		clickedSelectN();
+	}
+}
+
+function clickedSelectNOffsetPlus(){
+	var a = document.getElementById("select_n_offset");
+	if (a.value < 999){
+		a.value = parseInt(a.value) + 1;
+		clickedSelectN();
+	}
+}
+
 function createColorList(){
 	var a = document.getElementById("color_list");
 	
