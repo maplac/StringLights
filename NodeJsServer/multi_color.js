@@ -2,11 +2,25 @@ var history={};
 history.mc = [];
 history.selected = [];
 
+function sendSettings(){
+	var r = "", g = "", b = "";
+	
+	for(var i = 0; i < mc.length; i++){
+		if(i !== 0){
+			r += "/";
+			g += "/";
+			b += "/";
+		}
+		r += mc[i][0].toString();
+		g += mc[i][1].toString();
+		b += mc[i][2].toString();
+	}
+	sendPost("multi-color","type=color"+"&r="+r+"&g="+g+"&b="+b);
+}
 
 function colorChanged(){
-	sendPost("multi-color","type=color"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
+	//sendPost("multi-color","type=color"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
 	setColor();
-	//sendPost("color-picker","type=color&"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
 }
 
 function setColor(){
@@ -34,7 +48,7 @@ function setColor(){
 	}
 	
 	saveHistory();
-	
+		
 	for(var i = 0; i < selected.length; i++){
 		var index = selected[i];
 		//console.log("setColor(): checked index " + i);
@@ -49,7 +63,8 @@ function setColor(){
 			c[index].style.color='rgb('+cp.c[0]+','+cp.c[1]+','+cp.c[2]+')';
 		}
 	}
-
+	
+	sendSettings();
 }
 
 function clickedAdd(){
@@ -75,6 +90,9 @@ function clickedAdd(){
 		selected[i] += i;
 		mc.splice(selected[i]+1, 0, Array.from(cp.c));
 	}
+	
+	// send new setting
+	sendSettings();
 	
 	// create new color_list
 	createColorList();
@@ -115,6 +133,9 @@ function clickedRemove(){
 		mc.splice(selected[i], 1);
 	}
 	
+	// send new setting
+	sendSettings();
+	
 	// create new color_list
 	createColorList();
 	
@@ -134,6 +155,9 @@ function clickedUndo(){
 	for(var i = 0; i < history.mc.length; i++){
 		mc.push(Array.from(history.mc[i]));
 	}
+	
+	// send new setting
+	sendSettings();
 	
 	createColorList();
 	
