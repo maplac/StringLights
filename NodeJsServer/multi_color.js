@@ -6,16 +6,19 @@ function sendSettings(){
 	var r = "", g = "", b = "";
 	
 	for(var i = 0; i < mc.length; i++){
-		if(i !== 0){
-			r += "/";
-			g += "/";
-			b += "/";
-		}
-		r += mc[i][0].toString();
-		g += mc[i][1].toString();
-		b += mc[i][2].toString();
+		r += numToString(mc[i][0]);
+		g += numToString(mc[i][1]);
+		b += numToString(mc[i][2]);
 	}
 	sendPost("multi-color","type=color"+"&r="+r+"&g="+g+"&b="+b);
+}
+
+function numToString(num, length = 3){
+	var str = num.toString();
+	while(str.length < length){
+		str = "0" + str;
+	}
+	return str;
 }
 
 function colorChanged(){
