@@ -29,9 +29,13 @@ RgbColor white(colorSaturation);
 RgbColor black(0);
 ESP8266WebServer server(80);
 
+enum ColorEffect {SingleColor, MultiColor};
 unsigned char savedColors[SAVED_COLORS_COUNT][3] ;
 char savedNames[SAVED_COLORS_COUNT][COLOR_NAME_LENGTH];
 unsigned char singleColor[3];
+unsigned char multiColor[SAVED_COLORS_COUNT][3];
+int multiColorLength;
+ColorEffect currentEffect;
 
 //=============================================================================================
 void loadSettings(){
@@ -96,7 +100,7 @@ void loadSettings(){
   //---------------------------------------------------------------------
   file = SPIFFS.open("/single_color_settings.js", "r");
   if (!file) {
-      Serial.println("Opening color_picker_settings.js failed.");
+      Serial.println("Opening single_color_settings.js failed.");
       return;
   }
   size = file.size();
@@ -127,6 +131,59 @@ void loadSettings(){
   singleColor[0] = json2["sc"][0];
   singleColor[1] = json2["sc"][1];
   singleColor[2] = json2["sc"][2];
+
+  //---------------------------------------------------------------------
+  file = SPIFFS.open("/multi_color_settings.js", "r");
+  if (!file) {
+      Serial.println("Opening multi_color_settings.js failed.");
+      return;
+  }
+  size = file.size();
+  if (size > 1024) {
+    Serial.println("multi_color_settings is too large");
+    file.close();
+    return;
+  }
+  
+  if(!file.seek(7)){
+    Serial.println("seek failed");
+    file.close();
+    return;
+  }
+  size -= 8;
+  
+  file.readBytes(buf.get(), size);
+  file.close();
+
+  buf.get()[size] = 0;
+  JsonObject& json3 = jsonBuffer.parseObject(buf.get());
+  if (!json3.success()) {
+    Serial.println("Failed to parse multi_color_settings.js file");
+    return;
+  }
+
+  multiColorLength = json3["mc"].size();
+
+  for(int i = 0; i < multiColorLength; ++i){
+    multiColor[i][0] = json3["mc"][i][0];
+    multiColor[i][1] = json3["mc"][i][1];
+    multiColor[i][2] = json3["mc"][i][2];
+  }
+  
+  currentEffect = MultiColor;
+  //currentEffect = SingleColor;
+  
+  // todo nahrat efekt, todo ukladat efekt do souboru
+  if(currentEffect == MultiColor){
+    for(int i = 0; i < ledCount; ++i){
+      int index = i % multiColorLength;
+      strip.SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
+    }
+    strip.Show();
+  }else{
+    
+  }
+  
 }
 //=============================================================================================
 bool saveColorPickerSettings(){
@@ -233,6 +290,8 @@ void handleSingleColor(){
       file.print(server.arg("g"));file.print(",");
       file.print(server.arg("b"));file.print("]}'");
       file.close();
+
+      currentEffect = SingleColor;
       
       singleColor[0] = (unsigned char) (r & 0xFF);
       singleColor[1] = (unsigned char) (g & 0xFF);
@@ -243,6 +302,82 @@ void handleSingleColor(){
        }
       strip.Show();
       
+      }else{
+        server.send(400,"text/html", "r/g/b/ is missing");
+      }
+    }else{
+      server.send(400,"text/html", "unknown type");  
+    }
+  }else{
+    server.send(400,"text/html", "type is missing");
+  }
+  server.send(200,"text/html", "OK");
+}
+//=============================================================================================
+inline unsigned char stringToNum(char a, char b, char c){
+  return (a - 48) * 100 + (b - 48) * 10 + (c - 48);
+}
+//=============================================================================================
+void handleMultiColor(){
+  Serial.println("Handling MultioColor");
+  if(server.hasArg("type")){
+    if(server.arg("type") == "color"){
+      if(server.hasArg("r") && server.hasArg("g") && server.hasArg("b")){
+        String r = server.arg("r");
+        String g = server.arg("g");
+        String b = server.arg("b");
+        if ( (r.length() % 3) == 0 && (g.length() % 3) == 0 && (b.length() % 3) == 0){
+          if(r.length() == g.length() && g.length() == b.length()){
+            if((r.length() / 3) <= ledCount || r.length() < 0){
+              Serial.print("multi color: ");  Serial.print(r);
+              Serial.print(", ");  Serial.print(g);
+              Serial.print(", ");  Serial.println(b);
+  
+              //multiColorLength = r.length() / 3;
+              //int count = 0;
+              multiColorLength = 0;
+              for(int i = 0; i < r.length(); i += 3){
+                multiColor[multiColorLength][0] = stringToNum(r.charAt(i), r.charAt(i + 1), r.charAt(i + 2));
+                multiColor[multiColorLength][1] = stringToNum(g.charAt(i), g.charAt(i + 1), g.charAt(i + 2));
+                multiColor[multiColorLength][2] = stringToNum(b.charAt(i), b.charAt(i + 1), b.charAt(i + 2));
+                multiColorLength++;
+              }
+  
+              File file = SPIFFS.open("/multi_color_settings.js", "w");
+              if (!file) {
+                Serial.println("Opening failed.");
+                server.send(400,"text/html", "file open failed");
+                return;
+              }
+              file.print("mcstr='{\"mc\":[");
+              for(int i = 0; i < multiColorLength; ++i){
+                if(i > 0){
+                  file.print(",");
+                }
+                file.print("[");
+                file.print(multiColor[i][0]);file.print(",");
+                file.print(multiColor[i][1]);file.print(",");
+                file.print(multiColor[i][2]);file.print("]");
+              }
+              file.print("]}'");
+              file.close();
+
+              currentEffect = MultiColor;
+              
+              for(int i = 0; i < ledCount; ++i){
+                int index = i % multiColorLength;
+                strip.SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
+              }
+              strip.Show();
+            }else{
+              server.send(400,"text/html", "r/g/b/ length is out of range");
+            }
+          }else{
+            server.send(400,"text/html", "r/g/b/ lengths do not match");
+          }
+        }else{
+          server.send(400,"text/html", "r/g/b/ length is not divisible by 3");
+        }
       }else{
         server.send(400,"text/html", "r/g/b/ is missing");
       }
@@ -324,7 +459,7 @@ void setup() {
   SPIFFS.begin();
   Serial.println("File System Initialized");
 
-  loadSettings();
+  
   /*
   //Initialize AP Mode
   WiFi.softAP(ssid);  //Password not used
@@ -355,8 +490,9 @@ void setup() {
   //Initialize Webserver
   server.on("/",handleRoot);
   server.on("/index", HTTP_POST, handleIndex);
-  server.on("/single-color", HTTP_POST, handleSingleColor);
   server.on("/color-picker", HTTP_POST, handleColorPicker);
+  server.on("/single-color", HTTP_POST, handleSingleColor);
+  server.on("/multi-color", HTTP_POST, handleMultiColor);
   //server.on("/color_picker_settings.js", HTTP_GET, handleColorPickerSettings);
   //server.on("/single_color_settings.js", HTTP_GET, handleSingleColorSettings);
   server.onNotFound(handleWebRequests);
@@ -364,12 +500,18 @@ void setup() {
   Serial.println("HTTP server started");
 
   strip.Begin();
+  
+  loadSettings();
+ 
+  /*
   for(int i = 0; i < ledCount; ++i){
     strip.SetPixelColor(i, RgbColor(singleColor[0],singleColor[1],singleColor[2]));
   }
-  strip.Show();
+  strip.Show();*/
 
   //MDNS.addService("http", "tcp", 80);
+
+  Serial.println("Setup finished.");
 }
 
 //=============================================================================================
