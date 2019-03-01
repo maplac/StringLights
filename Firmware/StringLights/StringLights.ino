@@ -12,6 +12,8 @@
 
 #define SAVED_COLORS_COUNT  30
 #define COLOR_NAME_LENGTH   12
+#define EFFECT_SINGLE       0
+#define EFFECT_MULTI        1
 
 //ESP AP Mode configuration
 const char *ssid = "Tenda";
@@ -29,13 +31,13 @@ RgbColor white(colorSaturation);
 RgbColor black(0);
 ESP8266WebServer server(80);
 
-enum ColorEffect {SingleColor, MultiColor};
 unsigned char savedColors[SAVED_COLORS_COUNT][3] ;
 char savedNames[SAVED_COLORS_COUNT][COLOR_NAME_LENGTH];
 unsigned char singleColor[3];
 unsigned char multiColor[SAVED_COLORS_COUNT][3];
 int multiColorLength;
-ColorEffect currentEffect;
+int currentEffect;
+int isOn;
 
 //=============================================================================================
 void loadSettings(){
@@ -170,20 +172,63 @@ void loadSettings(){
     multiColor[i][2] = json3["mc"][i][2];
   }
   
-  currentEffect = MultiColor;
-  //currentEffect = SingleColor;
-  
-  // todo nahrat efekt, todo ukladat efekt do souboru
-  if(currentEffect == MultiColor){
-    for(int i = 0; i < ledCount; ++i){
-      int index = i % multiColorLength;
-      strip.SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
-    }
-    strip.Show();
-  }else{
-    
+  //---------------------------------------------------------------------
+  file = SPIFFS.open("/current_settings.js", "r");
+  if (!file) {
+      Serial.println("Opening current_settings.js failed.");
+      return;
+  }
+  size = file.size();
+  if (size > 1024) {
+    Serial.println("current_settings is too large");
+    file.close();
+    return;
   }
   
+  file.readBytes(buf.get(), size);
+  file.close();
+
+  buf.get()[size] = 0;
+  JsonObject& json4 = jsonBuffer.parseObject(buf.get());
+  if (!json4.success()) {
+    Serial.println("Failed to parse current_settings.js file");
+    return;
+  }
+
+  currentEffect = json4["effect"];
+  isOn = json4["isOn"];
+
+  if(isOn){
+    if(currentEffect == EFFECT_MULTI){
+      for(int i = 0; i < ledCount; ++i){
+        int index = i % multiColorLength;
+        strip.SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
+      }
+      strip.Show();
+    }else if(currentEffect == EFFECT_SINGLE){
+      for(int i = 0; i < ledCount; ++i){
+        strip.SetPixelColor(i, RgbColor(singleColor[0], singleColor[1], singleColor[2]));
+      }
+    }
+  }else{
+    for(int i = 0; i < ledCount; ++i){
+      strip.SetPixelColor(i, RgbColor(0, 0, 0));
+    }
+  }
+  strip.Show();
+}
+//=============================================================================================
+bool saveCurrentSettings(){
+  File file = SPIFFS.open("/current_settings.js", "w");
+  if (!file) {
+      Serial.println("Opening current_settings.js failed.");
+      return false;
+  }
+  file.print("{\"effect\":");file.print(String(currentEffect));
+  file.print(",\"isOn\":");file.print(String(isOn));
+  file.print("}");
+  file.close();
+  return true;
 }
 //=============================================================================================
 bool saveColorPickerSettings(){
@@ -282,7 +327,7 @@ void handleSingleColor(){
       File file = SPIFFS.open("/single_color_settings.js", "w");
       if (!file) {
           Serial.println("Opening failed.");
-          server.send(400,"text/html", "file open failed");
+          server.send(400,"text/html", "single_color_settings.js file open failed");
           return;
       }
       file.print("scstr='{\"sc\":[");
@@ -291,7 +336,7 @@ void handleSingleColor(){
       file.print(server.arg("b"));file.print("]}'");
       file.close();
 
-      currentEffect = SingleColor;
+      currentEffect = EFFECT_SINGLE;
       
       singleColor[0] = (unsigned char) (r & 0xFF);
       singleColor[1] = (unsigned char) (g & 0xFF);
@@ -301,6 +346,11 @@ void handleSingleColor(){
         strip.SetPixelColor(i, RgbColor(r,g,b));
        }
       strip.Show();
+
+      if(!saveCurrentSettings()){
+        server.send(400,"text/html", "current_settings.js file open failed");
+        return;
+      }
       
       }else{
         server.send(400,"text/html", "r/g/b/ is missing");
@@ -346,7 +396,7 @@ void handleMultiColor(){
               File file = SPIFFS.open("/multi_color_settings.js", "w");
               if (!file) {
                 Serial.println("Opening failed.");
-                server.send(400,"text/html", "file open failed");
+                server.send(400,"text/html", "multi_color_settings.js file open failed");
                 return;
               }
               file.print("mcstr='{\"mc\":[");
@@ -362,13 +412,18 @@ void handleMultiColor(){
               file.print("]}'");
               file.close();
 
-              currentEffect = MultiColor;
+              currentEffect = EFFECT_MULTI;
               
               for(int i = 0; i < ledCount; ++i){
                 int index = i % multiColorLength;
                 strip.SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
               }
               strip.Show();
+              
+              if(!saveCurrentSettings()){
+                server.send(400,"text/html", "current_settings.js file open failed");
+                return;
+              }
             }else{
               server.send(400,"text/html", "r/g/b/ length is out of range");
             }
