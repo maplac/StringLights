@@ -62,8 +62,7 @@ function setColor(){
 		if(colorIndex >= 0){
 			c[index].innerHTML = cp.names[colorIndex];
 		}else{
-			c[index].innerHTML = ".";
-			c[index].style.color='rgb('+cp.c[0]+','+cp.c[1]+','+cp.c[2]+')';
+			c[index].innerHTML = colorToString(cp.c);
 		}
 	}
 	
@@ -273,6 +272,12 @@ function clickedSelectNOffsetPlus(){
 	}
 }
 
+function colorItemNameDoubleClicked(e){
+	var id=e.target.id.split("_")[1];
+	colorPickerSetColor(mc[id]);
+	e.stopPropagation();
+}
+
 function createColorList(){
 	var a = document.getElementById("color_list");
 	
@@ -303,14 +308,15 @@ function createColorList(){
 		
 		c = document.createElement("SPAN");
 		c.setAttribute("class", "color_item_name unselectable");
+		c.setAttribute("id", "coloritemname_" + i);
+		c.addEventListener("dblclick", colorItemNameDoubleClicked, false);
 		c.style.backgroundColor='rgb('+mc[i][0]+','+mc[i][1]+','+mc[i][2]+')';
 		c.style.color=getTextColor(mc[i]);
 		var colorIndex = savedColorIndex(mc[i]);
 		if(colorIndex >= 0){
 			c.innerHTML = cp.names[colorIndex];
 		}else{
-			c.innerHTML = ".";
-			c.style.color='rgb('+mc[i][0]+','+mc[i][1]+','+mc[i][2]+')';
+			c.innerHTML = colorToString(mc[i]);
 		}
 		b.appendChild(c);
 		

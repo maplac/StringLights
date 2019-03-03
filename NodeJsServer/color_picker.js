@@ -46,6 +46,19 @@ function clickedLoad(but){
 	setBG();
 }
 
+function colorPickerSetColor(color){
+	cp.c[0]=color[0];
+	cp.c[1]=color[1];
+	cp.c[2]=color[2];
+	sR.value=cp.c[0];
+	sG.value=cp.c[1];
+	sB.value=cp.c[2];
+	tR.value=cp.c[0];
+	tG.value=cp.c[1];
+	tB.value=cp.c[2];
+	setBG();
+}
+
 function sendPost(url,msg){
 var http=new XMLHttpRequest();
 http.open("POST",url,true);
@@ -81,10 +94,7 @@ function clickedSave(but){
 
 function clickedRename(but){
 	var id=but.id.split("_")[1];
-	var strR = byteToString(cp.C[id][0]);
-	var strG = byteToString(cp.C[id][1]);
-	var strB = byteToString(cp.C[id][2]);
-	var res = prompt("Enter new name", strR+" "+strG+" "+strB);
+	var res = prompt("Enter new name", colorToString(cp.C[id]));
 	if(res === null || res === ""){	return;}
 	if(res.length > 12){ res = res.substring(0,12);}
 	document.getElementById('sp'+id).innerHTML = res;
@@ -107,6 +117,10 @@ function savedColorIndex(color){
 		}
 	}
 	return -1;
+}
+
+function colorToString(color){
+	return  byteToString(color[0]) + " " + byteToString(color[1]) + " " + byteToString(color[2]);
 }
 
 function loadColorPicker(){

@@ -59,7 +59,13 @@ function loadSingleColor(){
 		c.setAttribute("class", "unselectable");
 		c.style.backgroundColor = 'rgb('+cp.C[i][0]+','+cp.C[i][1]+','+cp.C[i][2]+')';
 		c.style.color=getTextColor(cp.C[i]);
-		c.innerHTML = cp.names[i];
+		var colorIndex = savedColorIndex(cp.C[i]);
+		console.log(colorIndex);
+		if(colorIndex >= 0){
+			c.innerHTML = cp.names[colorIndex];
+		}else{
+			c.innerHTML = colorToString(cp.C[i]);
+		}
 		b.appendChild(c);
 	}
 	// add event listener for clicking on an item in the list
