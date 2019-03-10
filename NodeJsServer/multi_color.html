@@ -30,6 +30,7 @@
 	  <a class="selectedMenu"href="multi_color.html">Multi Color</a>
     </div>
     <div id="content">
+	  <div><div id="custom-select"></div><div class="button_icon" onclick="clickedRenameSlot()"><img src="icon_edit.png" alt="rename"></div></div>
 	  <div><button onclick="clickedAdd()">Add</button><button onclick="clickedRemove()">Remove</button><button id="but_undo" onclick="clickedUndo()">Undo</button></div>
 	  <div><button onclick="clickedSelectAll()">Select all</button><button onclick="clickedSelectNone()">Select none</button><button onclick="clickedSelectInvert()">Select invert</button></div>
 	  <div><button onclick="clickedSelectN()">Select every N</button><div onclick="clickedSelectNNumberMinus()" class="button_small unselectable">-</div><input type="number" min="1" max="999" value="2" id="select_n_number" title="N"><div onclick="clickedSelectNNumberPlus()" class="button_small unselectable">+</div><div onclick="clickedSelectNOffsetMinus()" class="button_small unselectable">-</div><input type="number" min="0" max="999" value="0" id="select_n_offset" title="Offset"><div onclick="clickedSelectNOffsetPlus()" class="button_small unselectable">+</div></div>

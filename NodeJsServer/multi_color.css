@@ -1,3 +1,48 @@
+.button_small {
+	font-family:Verdana;
+	width: 28px;
+	height: 36px;
+	line-height: 36px;
+	background-color: #1a1a1a;
+    font-size: 16px;
+	border: none;
+    color: #FF5733;
+    text-align: center;
+    text-decoration: none;
+	margin-left: 7px;
+	/*margin-bottom: 7px;*/
+	border: 2px solid white;
+	display: inline-block;
+	cursor: pointer;
+}
+.button_small:hover {
+	background-color: #333;
+	cursor: pointer;
+}
+.button_icon {
+	position:absolute;
+	display: inline-block;
+	background-repeat: no-repeat;
+	background-color: #FF5733;
+	width: 45px;
+	height: 45px;
+	border: none;
+	box-shadow: none;
+	border-radius: 0px;
+	margin-left: 7px;
+	/*margin-top: 0px;*/
+	/*padding:8px;*/
+	/*margin:0px;*/
+	cursor: pointer;
+}
+.button_icon img {
+	posigion:relative;
+	margin-left: 10px;
+	margin-top: 10px;
+}
+.button_icon:hover {
+	background-color: #cc4528;
+}
 
 
 #color_list {
@@ -11,17 +56,21 @@
   height: calc(100vh - 140px);
 }
 
+#color_list label {
+	display: block;
+	width: 300px;
+	/*position: relative;*/
+}
 .color_item {
 	height: 32px;
 	margin: 10px 10px 10px 7px;
 	width: 300px;
-	/*cursor: pointer;*/
+	cursor: pointer;
 }
 
 .color_item_num {
 	width: 2.5em;
 	display: inline-block;
-	
 }
 
 .color_item_name {
@@ -50,28 +99,6 @@
 	/*margin-right: 4px;*/
 	margin-bottom: 7px;
 	border: 2px solid white;
-}
-
-.button_small {
-	font-family:Verdana;
-	width: 28px;
-	height: 36px;
-	line-height: 36px;
-	background-color: #1a1a1a;
-    font-size: 16px;
-	border: none;
-    color: #FF5733;
-    text-align: center;
-    text-decoration: none;
-	margin-left: 7px;
-	/*margin-bottom: 7px;*/
-	border: 2px solid white;
-	display: inline-block;
-	cursor: pointer;
-}
-.button_small:hover {
-	background-color: #333;
-	cursor: pointer;
 }
 
 /* Hide the browser's default checkbox */
@@ -119,3 +146,63 @@
   -ms-transform: rotate(45deg);
   transform: rotate(45deg);
 }
+
+ /* The container must be positioned relative: */
+#custom-select {
+  position: relative;
+  width: 412px;
+  height: 38px;
+  margin-left: 7px;
+  margin-bottom: 21px;
+  display: inline-block;
+}
+
+/* Style the arrow inside the select element: */
+.select-selected:after {
+  position: absolute;
+  content: "";
+  top: 20px;
+  right: 10px;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+  border-color: #fff transparent transparent transparent;
+}
+
+/* Point the arrow upwards when the select box is open (active): */
+.select-selected.select-arrow-active:after {
+  border-color: transparent transparent #fff transparent;
+  top: 13px;
+}
+
+/* style the items (options), including the selected item: */
+.select-items div,.select-selected {
+  background-color: #1a1a1a;
+  color: white;
+  text-decoration: none;
+  border: 2px solid #FF5733;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+/* Style items (options): */
+.select-items {
+	padding-top: 6px;
+  overflow:auto;
+  height: calc(100vh - 118px);
+  max-height: 1240px;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 99;
+}
+
+/* Hide the items when the select box is closed: */
+.select-hide {
+  display: none;
+}
+
+.select-items div:hover, .same-as-selected {
+  background-color: black;
+} 

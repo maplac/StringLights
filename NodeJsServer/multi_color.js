@@ -1,6 +1,11 @@
 var history={};
 history.mc = [];
 history.selected = [];
+var mcIndexRequest = 0;
+var mcCount = 0;
+var mcIndex = 0;
+var mcNames = [];
+var mc = [];
 
 function sendSettings(){
 	var r = "", g = "", b = "";
@@ -10,7 +15,7 @@ function sendSettings(){
 		g += numToString(mc[i][1]);
 		b += numToString(mc[i][2]);
 	}
-	sendPost("multi-color","type=color"+"&r="+r+"&g="+g+"&b="+b);
+	sendPost("multi-color","type=color"+"&index="+mcIndex+"&r="+r+"&g="+g+"&b="+b);
 }
 
 function numToString(num, length = 3){
@@ -278,6 +283,15 @@ function colorItemNameDoubleClicked(e){
 	e.stopPropagation();
 }
 
+function clickedRenameSlot(){
+	var res = prompt("Enter new name (12 chars limit)", mcNames[mcIndex]);
+	if(res === null || res === ""){	return;}
+	if(res.length > 12){ res = res.substring(0,12);}
+	mcNames[mcIndex] = res;
+	createSlotList();
+	sendPost("multi-color","type=rename&index="+mcIndex+"&name="+res);
+}
+
 function createColorList(){
 	var a = document.getElementById("color_list");
 	
@@ -325,27 +339,117 @@ function createColorList(){
 		d.appendChild(b);
 		a.appendChild(d);
 		
+		/*var e = document.createElement("DIV");
+		e.setAttribute("class", "qqq");
+		e.appendChild(d);
+		a.appendChild(e);*/
 	}
 }
 
+function createSlotList(){
+
+	var a, b, c, cs;
+	cs = document.getElementById("custom-select");
+	
+	// remove all
+	while (cs.firstChild) {
+		cs.removeChild(cs.firstChild);
+	}
+	
+	// visible selected item
+	a = document.createElement("DIV");
+	a.setAttribute("class", "select-selected unselectable");
+	a.setAttribute("id", "sel_selected");
+	a.innerHTML = mcNames[mcIndex];
+	a.addEventListener("click", function(e) {
+		// When the select box is clicked, close any other select boxes, and open/close the current select box:
+		e.stopPropagation();
+		closeAllSelect(this);
+		this.nextSibling.classList.toggle("select-hide");
+		this.classList.toggle("select-arrow-active");
+	});
+	cs.appendChild(a);
+	
+	// items in the option list
+	b = document.createElement("DIV");
+	b.setAttribute("class", "select-items select-hide");
+	for(var i=0; i<mcCount; i++){
+		c = document.createElement("DIV");
+		c.setAttribute("id", "sel_"+i);
+		c.setAttribute("class", "unselectable");
+		c.innerHTML = mcNames[i];
+		b.appendChild(c);
+	}
+	// add event listener for clicking on an item in the list
+	b.addEventListener('click', function(e) {
+		var id=e.target.id.split("_")[1];
+		requestSettings(id);
+	});
+	cs.appendChild(b);
+}
+
+function closeAllSelect(elmnt) {
+  var x, y, i, arrNo = [];
+  x = document.getElementsByClassName("select-items");
+  y = document.getElementsByClassName("select-selected");
+  for (i = 0; i < y.length; i++) {
+    if (elmnt == y[i]) {
+      arrNo.push(i)
+    } else {
+      y[i].classList.remove("select-arrow-active");
+    }
+  }
+  for (i = 0; i < x.length; i++) {
+    if (arrNo.indexOf(i)) {
+      x[i].classList.add("select-hide");
+    }
+  }
+}
+
+document.addEventListener("click", closeAllSelect);
+
+function requestSettings(index){
+	mcIndexRequest = index;
+	var xhttp = new XMLHttpRequest();
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			var mcTemp = JSON.parse(this.responseText);
+			mc = Array.from(mcTemp.mc);
+			mcIndex = mcIndexRequest;
+			createColorList();
+			saveHistory();
+			document.getElementById("but_undo").disabled = true;
+			var x = document.getElementById('sel_selected');
+			x.innerHTML = mcNames[mcIndex];
+			sendSettings();
+		}
+	};
+	xhttp.open("GET", "multi_color_settings_" + index + ".js", true);
+	xhttp.send();
+}
+
+
 window.onload=function(){
-  cp=JSON.parse(cpstr);
-  var mcTemp = JSON.parse(mcstr);
-  mc = mcTemp.mc;
-  cp.c = Array.from(mc[0]);
-  loadColorPicker();
-  createColorList();
-  
-  saveHistory();
-  document.getElementById("but_undo").disabled = true;
-  
-  var a = document.getElementById("select_n_number");
-  a.addEventListener("change", function(){
-    clickedSelectN();
-  },false);
-  a = document.getElementById("select_n_offset");
-  a.addEventListener("change", function(){
-    clickedSelectN();
-  },false);
+	cp=JSON.parse(cpstr);
+	var mcbaseTemp = JSON.parse(mcbasestr);
+	mcIndex = mcbaseTemp.mcindex;
+	mcCount = mcbaseTemp.mccount;
+	mcNames = Array.from(mcbaseTemp.mcnames);
+
+	requestSettings(mcIndex);
+
+	cp.c = [0,0,0];// todo read from settings file
+	loadColorPicker();
+	
+	createSlotList();
+
+	var a = document.getElementById("select_n_number");
+	a.addEventListener("change", function(){
+	clickedSelectN();
+	},false);
+	a = document.getElementById("select_n_offset");
+	a.addEventListener("change", function(){
+	clickedSelectN();
+	},false);
 }
 
