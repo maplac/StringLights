@@ -1,3 +1,30 @@
 #content button {
     border: 2px solid white;
 }
+h2 {
+	color: white;
+	padding-left: 30px;
+}
+.table_body {
+	padding-left: 10px;
+	padding-bottom: 20px;
+}
+.table_row {
+	color: white;
+	padding: 5px 0px;
+}
+.table_label {
+	float: left;
+	width: 150px;
+}
+.table_value {
+	width: 300px;
+}
+.multiline_text {
+	color: white;
+	padding: 10px;
+}
+#last_ip_address {
+	padding-bottom: 4px;
+	display: inline-block;
+}
