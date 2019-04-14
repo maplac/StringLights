@@ -1,0 +1,10 @@
+Na stranku index pridat nastaveni: jmena wifi site, heslo, pocet LED.
+
+Na strance index zobrazit posledni pridelenou ip adresu.
+
+Moznost zapnou hotspot.
+Vsechny adresy presmerovat do modulu.
+
+Pridat moznost nastavit statickou IP.
+
+Pridat post pro nastaveni jedne LED.
