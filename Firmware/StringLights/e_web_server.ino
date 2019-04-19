@@ -25,30 +25,6 @@ void handleWebRequests(){
 }
 
 //=============================================================================================
-void handleIndex(){
-  Serial.println("Handling Index");
-  if(server.hasArg("type")){
-    String type = server.arg("type");
-    if(type == "cmd"){
-      if(server.hasArg("cmd")){
-        if(server.arg("cmd") == "on"){
-          digitalWrite(led,1);
-        }else if(server.arg("cmd") == "off"){
-          digitalWrite(led,0);
-        }else{
-          server.send(400,"text/html", "unknown cmd");  
-        }
-      }else{
-        server.send(400,"text/html", "cmd is missing");
-      }
-    }    
-  }else{
-    server.send(400,"text/html", "type is missing");
-  }
-  server.send(200,"text/html", "OK");
-}
-
-//=============================================================================================
 bool loadFromSpiffs(String path){
   String dataType = "text/plain";
   if(path.endsWith("/")) path += "index.htm";

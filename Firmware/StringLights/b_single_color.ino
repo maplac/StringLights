@@ -67,9 +67,9 @@ void handleSingleColor(){
       singleColor[2] = (unsigned char) (b & 0xFF);
      
       for(int i = 0; i < ledCount; ++i){
-        strip.SetPixelColor(i, RgbColor(r,g,b));
+        strip->SetPixelColor(i, RgbColor(r,g,b));
        }
-      strip.Show();
+      strip->Show();
 
       if(!saveCurrentSettings()){
         server.send(400,"text/html", "current_settings.js file open failed");

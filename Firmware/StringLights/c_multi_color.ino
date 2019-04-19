@@ -157,9 +157,9 @@ void handleMultiColor(){
                 
                 for(int i = 0; i < ledCount; ++i){
                   int index = i % multiColorLength;
-                  strip.SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
+                  strip->SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
                 }
-                strip.Show();
+                strip->Show();
                 
                 if(!saveCurrentSettings()){
                   server.send(400,"text/html", "current_settings.js file open failed");

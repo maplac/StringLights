@@ -11,16 +11,18 @@
 #define EFFECT_MULTI        1
 #define MULTI_COLOR_COUNT   10
 #define MAX_SETTINGS_FILE_SIZE  2048
+#define MAX_WIFI_CHAR_LENGTH    31
 
 //ESP AP Mode configuration
-const char *ssid = "Tenda";
-const char *password = "unstuckunstuck";
+char ssid[MAX_WIFI_CHAR_LENGTH];
+char password[MAX_WIFI_CHAR_LENGTH];
+unsigned char lastIpAddress[4];
 
 const int led = 13;
-const int ledCount = 20;
+int ledCount = 1;
 
 #define colorSaturation 128
-NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod > strip(ledCount);
+NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod > *strip;
 RgbColor red(colorSaturation, 0, 0);
 RgbColor green(0, colorSaturation, 0);
 RgbColor blue(0, 0, colorSaturation);
@@ -43,9 +45,12 @@ int loadSingleColor(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &json
 int loadColorPicker(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer);
 int loadMultiColor(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer);
 int loadCurrentSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer);
+int loadSystemSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer);
 
 bool saveColorPickerSettings();
 bool saveCurrentSettings();
+bool saveSystemSettings();
+bool savePassword();
 
 bool loadFromSpiffs(String path);
 void handleWebRequests();
@@ -74,27 +79,29 @@ void loadSettings(){
   loadSingleColor(buf, jsonBuffer);
   loadMultiColor(buf, jsonBuffer);
   loadCurrentSettings(buf, jsonBuffer);
-  
-  isOn = 1; // todo 
-  
+  loadSystemSettings(buf, jsonBuffer);
+}
+
+void applySettings(){
+   
   if(isOn){
     if(currentEffect == EFFECT_MULTI){
       for(int i = 0; i < ledCount; ++i){
         int index = i % multiColorLength;
-        strip.SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
+        strip->SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
       }
-      strip.Show();
+      strip->Show();
     }else if(currentEffect == EFFECT_SINGLE){
       for(int i = 0; i < ledCount; ++i){
-        strip.SetPixelColor(i, RgbColor(singleColor[0], singleColor[1], singleColor[2]));
+        strip->SetPixelColor(i, RgbColor(singleColor[0], singleColor[1], singleColor[2]));
       }
     }
   }else{
     for(int i = 0; i < ledCount; ++i){
-      strip.SetPixelColor(i, RgbColor(0, 0, 0));
+      strip->SetPixelColor(i, RgbColor(0, 0, 0));
     }
   }
-  strip.Show();
+  strip->Show();
 }
 
 //=============================================================================================
@@ -110,6 +117,23 @@ void setup() {
   SPIFFS.begin();
   Serial.println("File System Initialized");
 
+  loadSettings();
+  isOn = 1; // todo
+
+  Serial.print("Wifi SSID: ");
+  Serial.println(ssid);
+  Serial.print("Led count: ");
+  Serial.println(ledCount);
+  Serial.print("Last IP: ");
+  Serial.print(lastIpAddress[0]);Serial.print(".");
+  Serial.print(lastIpAddress[1]);Serial.print(".");
+  Serial.print(lastIpAddress[2]);Serial.print(".");
+  Serial.println(lastIpAddress[3]);;
+
+  strip = new NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod >(ledCount);
+  strip->Begin();
+
+  applySettings();
   
   /*
   //Initialize AP Mode
@@ -118,18 +142,24 @@ void setup() {
   Serial.print("Web Server IP:");
   Serial.println(myIP);
   */
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    delay(1000);
     Serial.print(".");
   }
   // Print local IP address and start web server
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
   Serial.println("");
   Serial.println("WiFi connected.");
   Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+  IPAddress ipAddress = WiFi.localIP();
+  Serial.println(ipAddress);
+
+  IPAddress ipAddressLast(lastIpAddress[0], lastIpAddress[1], lastIpAddress[2], lastIpAddress[3]);
+  if(ipAddress != ipAddressLast){
+    Serial.println("IP address changed since last time.");
+  }
 
 /*
   if (MDNS.begin("test")) {              // Start the mDNS responder for esp8266.local
@@ -150,15 +180,11 @@ void setup() {
   server.begin();
   Serial.println("HTTP server started");
 
-  strip.Begin();
-  
-  loadSettings();
- 
   /*
   for(int i = 0; i < ledCount; ++i){
-    strip.SetPixelColor(i, RgbColor(singleColor[0],singleColor[1],singleColor[2]));
+    strip->SetPixelColor(i, RgbColor(singleColor[0],singleColor[1],singleColor[2]));
   }
-  strip.Show();*/
+  strip->Show();*/
 
   //MDNS.addService("http", "tcp", 80);
 
