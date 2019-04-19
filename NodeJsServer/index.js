@@ -1,4 +1,4 @@
-var lastIpAddress = "";
+var lastIpAddress = [];
 var ledCount = 0;
 var wifiSsid = "";
 
@@ -16,7 +16,7 @@ function clickedSubmit(){
 	ledCount = document.getElementById("led_count").value;
 	wifiSsid = document.getElementById("wifi_ssid").value;
 	wifiPasswd = document.getElementById("wifi_passwd").value;
-	var params="type=settings&ledcount="+ledCount+"&wifi_ssid="+wifiSsid;
+	var params="type=settings&led_count="+ledCount+"&wifi_ssid="+wifiSsid;
 	if(!wifiSsid){
 		document.getElementById("submit_label").innerHTML = "WiFi SSID can't be empty.";
 		return;
@@ -29,12 +29,17 @@ function clickedSubmit(){
 	http.open("POST",url,true);
 	http.setRequestHeader("Content-type","application/x-www-form-urlencoded");
 	http.onreadystatechange=function(){
-		if(http.readyState==4&&http.status==200){
-			//console.log(http.responseText)
-			var label = document.getElementById("submit_label");
-			if(http.responseText === "OK"){
-				label.innerHTML += "<br>Reply received. Settings saved.<br>Restart the device to apply changes.";
-			}else{
+		if(http.readyState==4){
+			if(http.status==200){
+				//console.log(http.responseText)
+				var label = document.getElementById("submit_label");
+				if(http.responseText === "OK"){
+					label.innerHTML += "<br>Reply received. Settings saved.<br>Restart the device to apply changes.";
+				}else{
+					label.innerHTML += "<br>Reply received. Saving setting failed with error message:<br>"+http.responseText;
+				}
+			}else if (http.status==400){
+				var label = document.getElementById("submit_label");
 				label.innerHTML += "<br>Reply received. Saving setting failed with error message:<br>"+http.responseText;
 			}
 		}
@@ -48,12 +53,19 @@ function colorChanged(){
 	sendPost("index","type=color"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
 }
 
+function ipArrayToString(ipArray){
+	if(ipArray.length !== 4){
+		return "unknown";
+	}
+	return ipArray[0] + "." + ipArray[1] + "." + ipArray[2] + "." + ipArray[3];
+}
+
 window.onload=function(){
 	cp=JSON.parse(cpstr);
 	cp.c = cp.C[0];
 	
 	var settingsTemp = JSON.parse(settingsstr);
-	lastIpAddress = settingsTemp.last_ip_address;
+	lastIpAddress = ipArrayToString(settingsTemp.last_ip_address);
 	ledCount = settingsTemp.led_count;
 	wifiSsid = settingsTemp.wifi_ssid;
 	
