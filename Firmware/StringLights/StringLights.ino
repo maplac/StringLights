@@ -13,10 +13,16 @@
 #define MAX_SETTINGS_FILE_SIZE  2048
 #define MAX_WIFI_CHAR_LENGTH    31
 
-//ESP AP Mode configuration
-char ssid[MAX_WIFI_CHAR_LENGTH];
-char password[MAX_WIFI_CHAR_LENGTH];
-unsigned char lastIpAddress[4];
+struct wifi_struct{
+  char ssid[MAX_WIFI_CHAR_LENGTH];
+  char password[MAX_WIFI_CHAR_LENGTH];
+  unsigned char lastIp[4];
+  bool staticActive;
+  unsigned char staticIp[4];
+  unsigned char subnet[4];
+  unsigned char gateway[4];
+  unsigned char dns[4];
+} wifiSettings;
 
 const int led = 13;
 int ledCount = 1;
@@ -121,14 +127,14 @@ void setup() {
   isOn = 1; // todo
 
   Serial.print("Wifi SSID: ");
-  Serial.println(ssid);
+  Serial.println(wifiSettings.ssid);
   Serial.print("Led count: ");
   Serial.println(ledCount);
   Serial.print("Last IP: ");
-  Serial.print(lastIpAddress[0]);Serial.print(".");
-  Serial.print(lastIpAddress[1]);Serial.print(".");
-  Serial.print(lastIpAddress[2]);Serial.print(".");
-  Serial.println(lastIpAddress[3]);;
+  Serial.print(wifiSettings.lastIp[0]);Serial.print(".");
+  Serial.print(wifiSettings.lastIp[1]);Serial.print(".");
+  Serial.print(wifiSettings.lastIp[2]);Serial.print(".");
+  Serial.println(wifiSettings.lastIp[3]);;
 
   strip = new NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod >(ledCount);
   strip->Begin();
@@ -142,23 +148,82 @@ void setup() {
   Serial.print("Web Server IP:");
   Serial.println(myIP);
   */
+  
+  /*
+  wifiSettings.staticActive = true; // todo smazat
+  String a("unstuckunstuck");
+  a.toCharArray(wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
+  String b("Tenda");
+  b.toCharArray(wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
+  */
+  WiFi.disconnect();
+  
   Serial.print("Connecting to ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
+  Serial.println(wifiSettings.ssid);
+  if(wifiSettings.staticActive){
+    Serial.println("Using static IP address");
+    Serial.print("IP: ");
+    Serial.print(wifiSettings.staticIp[0]);Serial.print(".");
+    Serial.print(wifiSettings.staticIp[1]);Serial.print(".");
+    Serial.print(wifiSettings.staticIp[2]);Serial.print(".");
+    Serial.println(wifiSettings.staticIp[3]);
+    Serial.print("Subnet mask: ");
+    Serial.print(wifiSettings.subnet[0]);Serial.print(".");
+    Serial.print(wifiSettings.subnet[1]);Serial.print(".");
+    Serial.print(wifiSettings.subnet[2]);Serial.print(".");
+    Serial.println(wifiSettings.subnet[3]);
+    Serial.print("Gateway: ");
+    Serial.print(wifiSettings.gateway[0]);Serial.print(".");
+    Serial.print(wifiSettings.gateway[1]);Serial.print(".");
+    Serial.print(wifiSettings.gateway[2]);Serial.print(".");
+    Serial.println(wifiSettings.gateway[3]);
+    Serial.print("DNS: ");
+    Serial.print(wifiSettings.dns[0]);Serial.print(".");
+    Serial.print(wifiSettings.dns[1]);Serial.print(".");
+    Serial.print(wifiSettings.dns[2]);Serial.print(".");
+    Serial.println(wifiSettings.dns[3]);
+    /*IPAddress ip(10,0,0,220);   
+    IPAddress gateway(10,0,0,138);   
+    IPAddress subnet(255,255,255,0);
+    IPAddress dns(8,8,8,8);*/
+    IPAddress ip(wifiSettings.staticIp[0], wifiSettings.staticIp[1], wifiSettings.staticIp[2], wifiSettings.staticIp[3]);
+    IPAddress gateway(wifiSettings.gateway[0], wifiSettings.gateway[1], wifiSettings.gateway[2], wifiSettings.gateway[3]);
+    IPAddress subnet(wifiSettings.subnet[0], wifiSettings.subnet[1], wifiSettings.subnet[2], wifiSettings.subnet[3]);
+    IPAddress dns(wifiSettings.dns[0], wifiSettings.dns[1], wifiSettings.dns[2], wifiSettings.dns[3]);
+    WiFi.config(ip, subnet, gateway, dns);
+  } else {
+    Serial.println("Using DHCP");
+  }
+  
+  WiFi.hostname("StringLights");
+  
+  WiFi.begin(wifiSettings.ssid, wifiSettings.password);
+  WiFi.mode(WIFI_STA);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.print(".");
   }
+  IPAddress ipAddress = WiFi.localIP();
+  
   // Print local IP address and start web server
   Serial.println("");
   Serial.println("WiFi connected.");
   Serial.println("IP address: ");
-  IPAddress ipAddress = WiFi.localIP();
   Serial.println(ipAddress);
-
-  IPAddress ipAddressLast(lastIpAddress[0], lastIpAddress[1], lastIpAddress[2], lastIpAddress[3]);
+    
+  IPAddress ipAddressLast(wifiSettings.lastIp[0], wifiSettings.lastIp[1], wifiSettings.lastIp[2], wifiSettings.lastIp[3]);
   if(ipAddress != ipAddressLast){
     Serial.println("IP address changed since last time.");
+     Serial.print("Previous IP: ");
+    Serial.print(wifiSettings.lastIp[0]);Serial.print(".");
+    Serial.print(wifiSettings.lastIp[1]);Serial.print(".");
+    Serial.print(wifiSettings.lastIp[2]);Serial.print(".");
+    Serial.println(wifiSettings.lastIp[3]);
+    wifiSettings.lastIp[0] = ipAddress[0];
+    wifiSettings.lastIp[1] = ipAddress[1];
+    wifiSettings.lastIp[2] = ipAddress[2];
+    wifiSettings.lastIp[3] = ipAddress[3];
+    saveSystemSettings();
   }
 
 /*

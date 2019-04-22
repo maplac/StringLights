@@ -30,11 +30,16 @@ int loadSystemSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &j
   }
 
   String wifi_ssid = json["wifi_ssid"];
-  wifi_ssid.toCharArray(ssid, MAX_WIFI_CHAR_LENGTH);
+  wifi_ssid.toCharArray(wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
   ledCount = json["led_count"];
+  wifiSettings.staticActive = json["static_active"];
 
   for(int i = 0; i < 4; ++i){
-    lastIpAddress[i] = json["last_ip_address"][i];
+    wifiSettings.lastIp[i] = json["last_ip_address"][i];
+    wifiSettings.staticIp[i] = json["static_ip"][i];
+    wifiSettings.subnet[i] = json["subnet"][i];
+    wifiSettings.gateway[i] = json["gateway"][i];
+    wifiSettings.dns[i] = json["dns"][i];
   }
 
   // file content is: {"wifi_passwd":"thePassword"}
@@ -61,7 +66,7 @@ int loadSystemSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &j
   }
 
   String wifi_passwd = json2["wifi_passwd"];
-  wifi_passwd.toCharArray(password, MAX_WIFI_CHAR_LENGTH);
+  wifi_passwd.toCharArray(wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
 
   return 0;
 }
@@ -85,35 +90,66 @@ void handleIndex(){
         server.send(400,"text/html", "cmd is missing");
       }
     } else if (type == "settings"){
-        if(server.hasArg("led_count") && server.hasArg("wifi_ssid")){
-          ledCount = server.arg("led_count").toInt();
-          if(ledCount > 1000){
-            ledCount = 1000;
-          }
-          String wifi_ssid = server.arg("wifi_ssid");
-          Serial.println("new wifi SSID: " + wifi_ssid);
-          wifi_ssid.toCharArray(ssid, MAX_WIFI_CHAR_LENGTH);
+      if(server.hasArg("led_count") && server.hasArg("wifi_ssid")){
+        ledCount = server.arg("led_count").toInt();
+        if(ledCount > 1000){
+          ledCount = 1000;
+        }
+        String wifi_ssid = server.arg("wifi_ssid");
+        Serial.println("new wifi SSID: " + wifi_ssid);
+        wifi_ssid.toCharArray(wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
+        
+        if (!saveSystemSettings) {
+          server.send(400,"text/html", "new setting cannot be saved");
+          return;
+        }
+
+        if(server.hasArg("wifi_passwd")){
+          String wifi_passwd = server.arg("wifi_passwd");
+          Serial.println("new wifi password: " + wifi_passwd);
+          wifi_passwd.toCharArray(wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
           
-          if (!saveSystemSettings) {
+          if (!savePassword()) {
             server.send(400,"text/html", "new setting cannot be saved");
             return;
           }
-
-          if(server.hasArg("wifi_passwd")){
-            String wifi_passwd = server.arg("wifi_passwd");
-            Serial.println("new wifi password: " + wifi_passwd);
-            wifi_passwd.toCharArray(password, MAX_WIFI_CHAR_LENGTH);
-            
-            if (!savePassword()) {
-              server.send(400,"text/html", "new setting cannot be saved");
-              return;
-            }
+        }
+        
+      } else {
+        server.send(400,"text/html", "led_count or wifi_ssid is missing");
+        return;
+      }
+    } else if (type == "settings_static"){
+      if(server.hasArg("static_active") && server.hasArg("ip") && server.hasArg("subnet") && server.hasArg("gateway") && server.hasArg("dns")){
+        String static_active = server.arg("static_active");
+        String ip = server.arg("ip");
+        String subnet = server.arg("subnet");
+        String gateway = server.arg("gateway");
+        String dns = server.arg("dns");
+        if(ip.length() == 12 && subnet.length() == 12 && gateway.length() == 12 && dns.length() == 12){
+          if(static_active == "true"){
+            wifiSettings.staticActive = true;
+          } else {
+            wifiSettings.staticActive = false;
           }
-          
+          for(int i = 0; i < 4; i ++){
+            wifiSettings.staticIp[i] = stringToNum(ip.charAt(i * 3), ip.charAt((i * 3) + 1), ip.charAt((i * 3) + 2));
+            wifiSettings.subnet[i] = stringToNum(subnet.charAt(i * 3), subnet.charAt((i * 3) + 1), subnet.charAt((i * 3) + 2));
+            wifiSettings.gateway[i] = stringToNum(gateway.charAt(i * 3), gateway.charAt((i * 3) + 1), gateway.charAt((i * 3) + 2));
+            wifiSettings.dns[i] = stringToNum(dns.charAt(i * 3), dns.charAt((i * 3) + 1), dns.charAt((i * 3) + 2));
+          }
+          if (!saveSystemSettings()) {
+            server.send(400,"text/html", "new setting cannot be saved");
+            return;
+          }
         } else {
-          server.send(400,"text/html", "led_count or wifi_ssid is missing");
+          server.send(400,"text/html", "ip, subnet, gateway or DNS doesn't have length 9");
           return;
         }
+      } else {
+        server.send(400,"text/html", "static_active, ip, subnet, gateway or DNS is missing");
+        return;
+      }
     } else {
       server.send(400,"text/html", "unknown type");
       return;
@@ -132,12 +168,38 @@ bool saveSystemSettings(){
     return false;
   }
   file.print("settingsstr='{\"led_count\":");file.print(ledCount);
-  file.print(",\"wifi_ssid\":\"");file.print(String(ssid));
+  file.print(",\"wifi_ssid\":\"");file.print(String(wifiSettings.ssid));
   file.print("\",\"last_ip_address\":[");
-  file.print(String(lastIpAddress[0]));file.print(",");
-  file.print(String(lastIpAddress[1]));file.print(",");
-  file.print(String(lastIpAddress[2]));file.print(",");
-  file.print(String(lastIpAddress[3]));file.print("]");
+  file.print(String(wifiSettings.lastIp[0]));file.print(",");
+  file.print(String(wifiSettings.lastIp[1]));file.print(",");
+  file.print(String(wifiSettings.lastIp[2]));file.print(",");
+  file.print(String(wifiSettings.lastIp[3]));file.print("]");
+  file.print(",\"static_active\":");
+  if(wifiSettings.staticActive){
+    file.print("true");
+  } else {
+    file.print("false");
+  }
+  file.print(",\"static_ip\":[");
+  file.print(String(wifiSettings.staticIp[0]));file.print(",");
+  file.print(String(wifiSettings.staticIp[1]));file.print(",");
+  file.print(String(wifiSettings.staticIp[2]));file.print(",");
+  file.print(String(wifiSettings.staticIp[3]));file.print("]");
+  file.print(",\"subnet\":[");
+  file.print(String(wifiSettings.subnet[0]));file.print(",");
+  file.print(String(wifiSettings.subnet[1]));file.print(",");
+  file.print(String(wifiSettings.subnet[2]));file.print(",");
+  file.print(String(wifiSettings.subnet[3]));file.print("]");
+  file.print(",\"gateway\":[");
+  file.print(String(wifiSettings.gateway[0]));file.print(",");
+  file.print(String(wifiSettings.gateway[1]));file.print(",");
+  file.print(String(wifiSettings.gateway[2]));file.print(",");
+  file.print(String(wifiSettings.gateway[3]));file.print("]");
+  file.print(",\"dns\":[");
+  file.print(String(wifiSettings.dns[0]));file.print(",");
+  file.print(String(wifiSettings.dns[1]));file.print(",");
+  file.print(String(wifiSettings.dns[2]));file.print(",");
+  file.print(String(wifiSettings.dns[3]));file.print("]");
   file.print("}'");
   file.close();
   return true;
@@ -150,7 +212,7 @@ bool savePassword(){
     return false;
   }
   file.print("'{\"wifi_passwd\":\"");
-  file.print(String(password));
+  file.print(String(wifiSettings.password));
   file.print("\"}'");
   file.close();
   return true;
