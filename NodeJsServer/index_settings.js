@@ -1,1 +1,1 @@
-settingsstr='{"led_count":20, "wifi_ssid":"Tenda", "last_ip_address":[10,0,0,222]}'
+settingsstr='{"led_count":20, "wifi_ssid":"Tenda", "last_ip_address":[10,0,0,222], "static_active":true, "static_ip":[10,0,0,220], "subnet":[255,255,255,0], "gateway":[10,0,0,138], "dns":[8,8,8,8]}'

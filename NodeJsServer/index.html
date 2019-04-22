@@ -30,15 +30,25 @@
     <div id="content">
       <button id="but_on"onclick="clickedTurn(this)">Turn ON</button>
       <button id="but_off"onclick="clickedTurn(this)">Turn OFF</button>
-	  <h2>Settings</h2>
+	  <h2>Generic settings</h2>
 	  <div class="table_body">
-		  <div class="table_row"><span class="table_label">Last IP address:</span><span id="last_ip_address">---.---.---.---</span><div>
-		  <div class="table_row"><span class="table_label">Number of LEDs:</span><input id="led_count" class="table_value" type="number" min="0" max="100" value="1"></input></div>
-		  <div class="table_row"><span class="table_label">WiFi SSID:</span><input id="wifi_ssid" class="table_value" type="text" maxlength="30"></input></div>
-		  <div class="table_row"><span class="table_label">WiFi password:</span><input id="wifi_passwd" class="table_value" type="text" placeholder="Leave empty if you don't want to change the pwd." maxlength="30"></input></div>
+		  <div class="table_row"><span class="table_label">Last IP address:</span><span id="last_ip_address">---.---.---.---</span></div>
+		  <div class="table_row"><span class="table_label">Number of LEDs:</span><input id="led_count" class="table_value" type="number" min="0" max="100" value="1"></div>
+		  <div class="table_row"><span class="table_label">WiFi SSID:</span><input id="wifi_ssid" class="table_value" type="text" maxlength="30"></div>
+		  <div class="table_row"><span class="table_label">WiFi password:</span><input id="wifi_passwd" class="table_value" type="text" placeholder="Leave empty if you don't want to change the pwd." maxlength="30"></div>
 	  </div>
 	  <button onclick="clickedSubmit()">Submit</button><br>
 	  <div id="submit_label" class="multiline_text"></div>
+	  <h2>Static Ip settings</h2>
+	  <div class="table_body">
+		<div class="table_row"><span class="table_label">Use static IP:</span><input id="static_active" class="table_checkbox" type="checkbox" value="static_active"></div>
+		<div class="table_row"><span class="table_label">IP address:</span><input id="static_ip" class="table_value" type="text"></div>
+		<div class="table_row"><span class="table_label">Subnet mask:</span><input id="static_subnet" class="table_value" type="text"></div>
+		<div class="table_row"><span class="table_label">Gateway:</span><input id="static_gate" class="table_value" type="text"></div>
+		<div class="table_row"><span class="table_label">DNS:</span><input id="static_dns" class="table_value" type="text"></div>
+	  </div>
+	  <button onclick="clickedSubmitStatic()">Submit</button><br>
+	  <div id="submit_label_static" class="multiline_text"></div>
     </div>
   </div>
 </body>
