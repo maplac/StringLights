@@ -80,6 +80,7 @@ int loadMultiColor(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonB
 
 //=============================================================================================
 void handleMultiColor(){
+  digitalWrite(gpioLedProcessing, 1);
   Serial.println("Handling MultiColor");
   if(server.hasArg("type") && server.hasArg("index")){
     int index = server.arg("index").toInt();
@@ -212,6 +213,7 @@ void handleMultiColor(){
     server.send(400,"text/html", "type is missing");
   }
   server.send(200,"text/html", "OK");
+  digitalWrite(gpioLedProcessing, 0);
 }
 
 

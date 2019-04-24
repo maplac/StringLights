@@ -90,6 +90,7 @@ bool saveColorPickerSettings(){
 
 //=============================================================================================
 void handleColorPicker(){
+  digitalWrite(gpioLedProcessing, 1);
   Serial.println("Handling ColorPicker");
 
   if(server.hasArg("type")){
@@ -142,4 +143,5 @@ void handleColorPicker(){
     server.send(400,"text/html", "type is missing");
   }
   server.send(200,"text/html", "OK");
+  digitalWrite(gpioLedProcessing, 0);
 }

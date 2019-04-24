@@ -73,19 +73,23 @@ int loadSystemSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &j
 
 //=============================================================================================
 void handleIndex(){
+  digitalWrite(gpioLedProcessing, 1);
   Serial.println("Handling Index");
   if(server.hasArg("type")){
     String type = server.arg("type");
     if(type == "cmd"){
       if(server.hasArg("cmd")){
         if(server.arg("cmd") == "on"){
-          digitalWrite(led,1);
+          isOn = true;
+          //digitalWrite(gpioLedHotSpot,1);
         }else if(server.arg("cmd") == "off"){
-          digitalWrite(led,0);
+          //digitalWrite(gpioLedHotSpot,0);
+          isOn = false;
         }else{
           server.send(400,"text/html", "unknown cmd");
           return;
         }
+        // todo save settings
       }else{
         server.send(400,"text/html", "cmd is missing");
       }
@@ -99,7 +103,7 @@ void handleIndex(){
         Serial.println("new wifi SSID: " + wifi_ssid);
         wifi_ssid.toCharArray(wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
         
-        if (!saveSystemSettings) {
+        if (!saveSystemSettings()) {
           server.send(400,"text/html", "new setting cannot be saved");
           return;
         }
@@ -159,6 +163,7 @@ void handleIndex(){
     return;
   }
   server.send(200,"text/html", "OK");
+  digitalWrite(gpioLedProcessing, 0);
 }
 
 //=============================================================================================

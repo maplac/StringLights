@@ -1,14 +1,20 @@
 
 void handleRoot(){
+  digitalWrite(gpioLedProcessing, 1);
   Serial.println("Handling root.");
   server.sendHeader("Location", "/index.html",true);   //Redirect to our html web page
   server.send(302, "text/plane","");
+  digitalWrite(gpioLedProcessing, 0);
 }
 
 //=============================================================================================
 void handleWebRequests(){
+  digitalWrite(gpioLedProcessing, 1);
   //Serial.println("Handling WebRequests.");
-  if(loadFromSpiffs(server.uri())) return;
+  if(loadFromSpiffs(server.uri())){
+    digitalWrite(gpioLedProcessing, 0);
+    return;
+  }
   String message = "File Not Detected\n\n";
   message += "URI: ";
   message += server.uri();
@@ -22,6 +28,7 @@ void handleWebRequests(){
   }
   server.send(404, "text/plain", message);
   Serial.println(message);
+  digitalWrite(gpioLedProcessing, 0);
 }
 
 //=============================================================================================

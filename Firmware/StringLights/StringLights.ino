@@ -22,9 +22,12 @@ struct wifi_struct{
   unsigned char subnet[4];
   unsigned char gateway[4];
   unsigned char dns[4];
+  bool accessPointActive;
 } wifiSettings;
 
-const int led = 13;
+const int gpioLedStatus = 12;
+const int gpioLedProcessing = 13;
+const int gpioLedAcessPoint = 14;
 int ledCount = 1;
 
 #define colorSaturation 128
@@ -116,15 +119,19 @@ void setup() {
   Serial.begin(115200);
   Serial.println();
 
-  pinMode(led, OUTPUT);
-  digitalWrite(led, LOW);
+  pinMode(gpioLedStatus, OUTPUT);
+  digitalWrite(gpioLedStatus, LOW);
+  pinMode(gpioLedProcessing, OUTPUT);
+  digitalWrite(gpioLedProcessing, LOW);
+  pinMode(gpioLedAcessPoint, OUTPUT);
+  digitalWrite(gpioLedAcessPoint, LOW);
 
   //Initialize File System
   SPIFFS.begin();
   Serial.println("File System Initialized");
 
   loadSettings();
-  isOn = 1; // todo
+  isOn = 1; // todo smazat
 
   Serial.print("Wifi SSID: ");
   Serial.println(wifiSettings.ssid);
@@ -232,6 +239,7 @@ void setup() {
   } else {
     Serial.println("Error setting up MDNS responder!");
   }
+  MDNS.addService("http", "tcp", 80);
 */
   //Initialize Webserver
   server.on("/",handleRoot);
@@ -239,8 +247,6 @@ void setup() {
   server.on("/color-picker", HTTP_POST, handleColorPicker);
   server.on("/single-color", HTTP_POST, handleSingleColor);
   server.on("/multi-color", HTTP_POST, handleMultiColor);
-  //server.on("/color_picker_settings.js", HTTP_GET, handleColorPickerSettings);
-  //server.on("/single_color_settings.js", HTTP_GET, handleSingleColorSettings);
   server.onNotFound(handleWebRequests);
   server.begin();
   Serial.println("HTTP server started");
@@ -251,9 +257,10 @@ void setup() {
   }
   strip->Show();*/
 
-  //MDNS.addService("http", "tcp", 80);
+  
 
   Serial.println("Setup finished.");
+  digitalWrite(gpioLedStatus, 1);
 }
 
 //=============================================================================================

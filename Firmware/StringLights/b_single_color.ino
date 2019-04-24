@@ -37,6 +37,7 @@ int loadSingleColor(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &json
 
 //=============================================================================================
 void handleSingleColor(){
+  digitalWrite(gpioLedProcessing, 1);
   Serial.println("Handling SingleColor");
   if(server.hasArg("type")){
     if(server.arg("type") == "color"){
@@ -86,4 +87,5 @@ void handleSingleColor(){
     server.send(400,"text/html", "type is missing");
   }
   server.send(200,"text/html", "OK");
+  digitalWrite(gpioLedProcessing, 0);
 }

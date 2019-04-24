@@ -23,7 +23,7 @@ int loadCurrentSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &
   }
 
   currentEffect = json["effect"];
-  //isOn = json4["isOn"];
+  isOn = json["isOn"];
   
   return 0;
 }
