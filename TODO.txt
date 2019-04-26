@@ -2,6 +2,17 @@ Tlacitko na restart.
 
 Moznost zapnou hotspot.
 Vsechny adresy presmerovat do modulu.
+Hw prepinac pro vyber
 
 Pridat post pro nastaveni jedne LED.
 Transparentni mod kdy se rovnou nastavi led. Bez ukladani nastaveni do pameti.
+
+Dodelat on/off vypinani z webu.
+
+Kdyz je chyba, tak neposilat OK.
+
+Zlepsit vypisy pri startu.
+
+Cekani na pripojeni k wifi presunout do loop();
+
+Opravit: Pri prepnuti na stranku multi color se zmeni barva led.

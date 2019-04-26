@@ -25,18 +25,26 @@ struct wifi_struct{
   bool accessPointActive;
 } wifiSettings;
 
+struct button_struct {
+  int state = HIGH;
+  volatile unsigned long lastDebounceTime = 0;
+  volatile bool debouncing = false;
+  unsigned long lastPressTime = 0;
+} button1, button2;
+
 const int gpioLedStatus = 12;
 const int gpioLedProcessing = 13;
 const int gpioLedAcessPoint = 14;
+const int gpioBut1 = 4;
+const int gpioBut2 = 5;
+const unsigned long debounceDelay = 50;
+const unsigned long longPressTime = 2000;
 int ledCount = 1;
 
-#define colorSaturation 128
+volatile int butCounter = 0;
+volatile int lastButCounter = 0;
+
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod > *strip;
-RgbColor red(colorSaturation, 0, 0);
-RgbColor green(0, colorSaturation, 0);
-RgbColor blue(0, 0, colorSaturation);
-RgbColor white(colorSaturation);
-RgbColor black(0);
 ESP8266WebServer server(80);
 
 unsigned char savedColors[SAVED_COLORS_COUNT][3] ;
@@ -49,6 +57,10 @@ int multiColorIndex;
 char multiColorNames[MULTI_COLOR_COUNT][COLOR_NAME_LENGTH];
 int currentEffect;
 int isOn;
+
+// Allocate a buffer to store contents of files
+std::unique_ptr<char[]> buf(new char[MAX_SETTINGS_FILE_SIZE]);
+DynamicJsonBuffer jsonBuffer(1000);
 
 int loadSingleColor(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer);
 int loadColorPicker(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer);
@@ -73,33 +85,53 @@ void handleMultiColor();
 //=============================================================================================
 //=============================================================================================
 
+void handleInterruptBut1(){
+  button1.lastDebounceTime = millis();
+  button1.debouncing = true;
+}
+void handleInterruptBut2(){
+  button2.lastDebounceTime = millis();
+  button2.debouncing = true;
+}
+
 inline unsigned char stringToNum(char a, char b, char c){
   return (a - 48) * 100 + (b - 48) * 10 + (c - 48);
 }
-//=============================================================================================
-void loadSettings(){
-  Serial.println("Loading settings");
-
-  // Allocate a buffer to store contents of the files
-  std::unique_ptr<char[]> buf(new char[MAX_SETTINGS_FILE_SIZE]);
-  DynamicJsonBuffer jsonBuffer(1000);
-  
-  loadColorPicker(buf, jsonBuffer);
-  loadSingleColor(buf, jsonBuffer);
-  loadMultiColor(buf, jsonBuffer);
-  loadCurrentSettings(buf, jsonBuffer);
-  loadSystemSettings(buf, jsonBuffer);
+void stringToArray(String &str, char arr[], int maxLength){
+  for(int i = 0; i < maxLength; i++) {
+    if (i == str.length()){
+      arr[i] = '\0';
+    } else if (i > str.length()){
+      break;
+    }
+    arr[i] = str[i];
+  }
 }
 
+void stringToArray(char *str, char arr[], int maxLength){
+  for(int i = 0; i < maxLength; i++) {
+    arr[i] = str[i];
+    if (arr[i] == '\0'){
+      break;
+    }
+  }
+}
+
+void printIp(unsigned char ip[]){
+  Serial.print(ip[0]);Serial.print(".");
+  Serial.print(ip[1]);Serial.print(".");
+  Serial.print(ip[2]);Serial.print(".");
+  Serial.print(ip[3]);
+}
+
+//=============================================================================================
 void applySettings(){
-   
   if(isOn){
     if(currentEffect == EFFECT_MULTI){
       for(int i = 0; i < ledCount; ++i){
         int index = i % multiColorLength;
         strip->SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
       }
-      strip->Show();
     }else if(currentEffect == EFFECT_SINGLE){
       for(int i = 0; i < ledCount; ++i){
         strip->SetPixelColor(i, RgbColor(singleColor[0], singleColor[1], singleColor[2]));
@@ -115,9 +147,12 @@ void applySettings(){
 
 //=============================================================================================
 void setup() {
-  delay(1000);
   Serial.begin(115200);
+  //Serial.setDebugOutput(true);
   Serial.println();
+  delay(100);
+
+  Serial.print("Heap start: ");Serial.println(ESP.getFreeHeap());
 
   pinMode(gpioLedStatus, OUTPUT);
   digitalWrite(gpioLedStatus, LOW);
@@ -125,29 +160,30 @@ void setup() {
   digitalWrite(gpioLedProcessing, LOW);
   pinMode(gpioLedAcessPoint, OUTPUT);
   digitalWrite(gpioLedAcessPoint, LOW);
-
+  pinMode(gpioBut1, INPUT);
+  pinMode(gpioBut2, INPUT);
+  attachInterrupt(digitalPinToInterrupt(gpioBut1), handleInterruptBut1, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(gpioBut2), handleInterruptBut2, CHANGE);
+  
   //Initialize File System
   SPIFFS.begin();
   Serial.println("File System Initialized");
-
-  loadSettings();
+  
+  loadSystemSettings(buf, jsonBuffer);
+  Serial.println("SystemSettings loaded.");
+  
+  Serial.print("Heap load: ");Serial.println(ESP.getFreeHeap());
+  
   isOn = 1; // todo smazat
+  //ledCount = 1;
 
   Serial.print("Wifi SSID: ");
   Serial.println(wifiSettings.ssid);
   Serial.print("Led count: ");
   Serial.println(ledCount);
   Serial.print("Last IP: ");
-  Serial.print(wifiSettings.lastIp[0]);Serial.print(".");
-  Serial.print(wifiSettings.lastIp[1]);Serial.print(".");
-  Serial.print(wifiSettings.lastIp[2]);Serial.print(".");
-  Serial.println(wifiSettings.lastIp[3]);;
-
-  strip = new NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod >(ledCount);
-  strip->Begin();
-
-  applySettings();
-  
+  printIp(wifiSettings.lastIp);Serial.println("");
+    
   /*
   //Initialize AP Mode
   WiFi.softAP(ssid);  //Password not used
@@ -156,39 +192,20 @@ void setup() {
   Serial.println(myIP);
   */
   
-  /*
-  wifiSettings.staticActive = true; // todo smazat
-  String a("unstuckunstuck");
-  a.toCharArray(wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
-  String b("Tenda");
-  b.toCharArray(wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
-  */
-  WiFi.disconnect();
+  wifiSettings.staticActive = false;// todo smazat
+  //stringToArray("unstuckunstuck", wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
+  //stringToArray("Tenda", wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
   
-  Serial.print("Connecting to ");
-  Serial.println(wifiSettings.ssid);
   if(wifiSettings.staticActive){
     Serial.println("Using static IP address");
     Serial.print("IP: ");
-    Serial.print(wifiSettings.staticIp[0]);Serial.print(".");
-    Serial.print(wifiSettings.staticIp[1]);Serial.print(".");
-    Serial.print(wifiSettings.staticIp[2]);Serial.print(".");
-    Serial.println(wifiSettings.staticIp[3]);
+    printIp(wifiSettings.staticIp);Serial.println("");
     Serial.print("Subnet mask: ");
-    Serial.print(wifiSettings.subnet[0]);Serial.print(".");
-    Serial.print(wifiSettings.subnet[1]);Serial.print(".");
-    Serial.print(wifiSettings.subnet[2]);Serial.print(".");
-    Serial.println(wifiSettings.subnet[3]);
+    printIp(wifiSettings.subnet);Serial.println("");
     Serial.print("Gateway: ");
-    Serial.print(wifiSettings.gateway[0]);Serial.print(".");
-    Serial.print(wifiSettings.gateway[1]);Serial.print(".");
-    Serial.print(wifiSettings.gateway[2]);Serial.print(".");
-    Serial.println(wifiSettings.gateway[3]);
+    printIp(wifiSettings.gateway);Serial.println("");
     Serial.print("DNS: ");
-    Serial.print(wifiSettings.dns[0]);Serial.print(".");
-    Serial.print(wifiSettings.dns[1]);Serial.print(".");
-    Serial.print(wifiSettings.dns[2]);Serial.print(".");
-    Serial.println(wifiSettings.dns[3]);
+    printIp(wifiSettings.dns);Serial.println("");
     /*IPAddress ip(10,0,0,220);   
     IPAddress gateway(10,0,0,138);   
     IPAddress subnet(255,255,255,0);
@@ -202,17 +219,26 @@ void setup() {
     Serial.println("Using DHCP");
   }
   
-  WiFi.hostname("StringLights");
-  
-  WiFi.begin(wifiSettings.ssid, wifiSettings.password);
+  //WiFi.hostname("StringLights");
+  /*
+  // FIX >>>>>
+  WiFi.persistent(false);
+  WiFi.mode(WIFI_OFF);   // this is a temporary line, to be removed after SDK update to 1.5.4
+  WiFi.mode(WIFI_STA);//*/
+  // <<<<<<<<<
+  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+  WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
+  WiFi.begin(wifiSettings.ssid, wifiSettings.password);
+  
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.print(".");
   }
+  
   IPAddress ipAddress = WiFi.localIP();
   
-  // Print local IP address and start web server
+  // Print local IP address
   Serial.println("");
   Serial.println("WiFi connected.");
   Serial.println("IP address: ");
@@ -221,11 +247,6 @@ void setup() {
   IPAddress ipAddressLast(wifiSettings.lastIp[0], wifiSettings.lastIp[1], wifiSettings.lastIp[2], wifiSettings.lastIp[3]);
   if(ipAddress != ipAddressLast){
     Serial.println("IP address changed since last time.");
-     Serial.print("Previous IP: ");
-    Serial.print(wifiSettings.lastIp[0]);Serial.print(".");
-    Serial.print(wifiSettings.lastIp[1]);Serial.print(".");
-    Serial.print(wifiSettings.lastIp[2]);Serial.print(".");
-    Serial.println(wifiSettings.lastIp[3]);
     wifiSettings.lastIp[0] = ipAddress[0];
     wifiSettings.lastIp[1] = ipAddress[1];
     wifiSettings.lastIp[2] = ipAddress[2];
@@ -251,22 +272,71 @@ void setup() {
   server.begin();
   Serial.println("HTTP server started");
 
-  /*
-  for(int i = 0; i < ledCount; ++i){
-    strip->SetPixelColor(i, RgbColor(singleColor[0],singleColor[1],singleColor[2]));
-  }
-  strip->Show();*/
+  strip = new NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod >(ledCount);
+  strip->Begin();
 
+  loadColorPicker(buf, jsonBuffer);
+  Serial.println("ColorPicker loaded.");
+  loadSingleColor(buf, jsonBuffer);
+  Serial.println("SingleColor loaded.");
+  loadMultiColor(buf, jsonBuffer);
+  Serial.println("MultiColor loaded.");
+  loadCurrentSettings(buf, jsonBuffer);
+  Serial.println("CurrentSettings loaded.");
   
+  applySettings();
+  Serial.println("Settings applied.");
 
   Serial.println("Setup finished.");
   digitalWrite(gpioLedStatus, 1);
+  Serial.print("Heap end: ");Serial.println(ESP.getFreeHeap());
 }
 
 //=============================================================================================
 void loop() {
   //MDNS.update();
   server.handleClient();
+
+  if (button1.debouncing) {
+    if ((millis() - button1.lastDebounceTime) > debounceDelay) {
+      button1.debouncing = false;
+      int butState = digitalRead(gpioBut1);
+      // button pressed
+      if ( (button1.state == 1) && (butState == 0)) {
+        //Serial.println("But1 pressed");
+        button1.lastPressTime = millis();
+      }
+      // button released
+      if ( (button1.state == 0) && (butState == 1)) {
+        if ((millis() - button1.lastPressTime) > longPressTime) {
+          Serial.println("But1 long press");
+        } else {
+          Serial.println("But1 short press");
+        }
+      }
+      button1.state = butState;
+    }
+  }
+  if (button2.debouncing) {
+    if ((millis() - button2.lastDebounceTime) > debounceDelay) {
+      button2.debouncing = false;
+      int butState = digitalRead(gpioBut2);
+      // button pressed
+      if ( (button2.state == 1) && (butState == 0)) {
+        //Serial.println("But2 pressed");
+        button2.lastPressTime = millis();
+      }
+      // button released
+      if ( (button2.state == 0) && (butState == 1)) {
+        if ((millis() - button2.lastPressTime) > longPressTime) {
+          Serial.println("But2 long press");
+        } else {
+          Serial.println("But2 short press");
+        }
+      }
+      button2.state = butState;
+    }
+  }
 }
 
 
