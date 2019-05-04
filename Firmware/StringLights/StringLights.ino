@@ -152,8 +152,9 @@ void setup() {
   Serial.println();
   delay(100);
 
-  Serial.print("Heap start: ");Serial.println(ESP.getFreeHeap());
+  Serial.print("Free heap at start: ");Serial.println(ESP.getFreeHeap());
 
+  // Initialize GPIO
   pinMode(gpioLedStatus, OUTPUT);
   digitalWrite(gpioLedStatus, LOW);
   pinMode(gpioLedProcessing, OUTPUT);
@@ -168,22 +169,16 @@ void setup() {
   //Initialize File System
   SPIFFS.begin();
   Serial.println("File System Initialized");
-  
-  loadSystemSettings(buf, jsonBuffer);
-  Serial.println("SystemSettings loaded.");
-  
-  Serial.print("Heap load: ");Serial.println(ESP.getFreeHeap());
-  
-  isOn = 1; // todo smazat
-  //ledCount = 1;
 
-  Serial.print("Wifi SSID: ");
-  Serial.println(wifiSettings.ssid);
-  Serial.print("Led count: ");
-  Serial.println(ledCount);
-  Serial.print("Last IP: ");
-  printIp(wifiSettings.lastIp);Serial.println("");
-    
+  // Load system setting
+  loadSystemSettings(buf, jsonBuffer);
+  Serial.println("System settings loaded.");
+
+  // Override settings (for debugging) 
+  //ledCount = 1;
+  //stringToArray("unstuckunstuck", wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
+  //stringToArray("Tenda", wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
+      
   /*
   //Initialize AP Mode
   WiFi.softAP(ssid);  //Password not used
@@ -191,13 +186,17 @@ void setup() {
   Serial.print("Web Server IP:");
   Serial.println(myIP);
   */
-  
-  wifiSettings.staticActive = false;// todo smazat
-  //stringToArray("unstuckunstuck", wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
-  //stringToArray("Tenda", wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
+
+  // Initialize WiFi
+  Serial.print("Wifi SSID: ");
+  Serial.println(wifiSettings.ssid);
+  Serial.print("Led count: ");
+  Serial.println(ledCount);
+  Serial.print("Last IP: ");
+  printIp(wifiSettings.lastIp);Serial.println("");
   
   if(wifiSettings.staticActive){
-    Serial.println("Using static IP address");
+    Serial.println("Using static IP.");
     Serial.print("IP: ");
     printIp(wifiSettings.staticIp);Serial.println("");
     Serial.print("Subnet mask: ");
@@ -216,35 +215,35 @@ void setup() {
     IPAddress dns(wifiSettings.dns[0], wifiSettings.dns[1], wifiSettings.dns[2], wifiSettings.dns[3]);
     WiFi.config(ip, subnet, gateway, dns);
   } else {
-    Serial.println("Using DHCP");
+    Serial.println("Using DHCP.");
   }
   
   //WiFi.hostname("StringLights");
-  /*
+  
   // FIX >>>>>
-  WiFi.persistent(false);
-  WiFi.mode(WIFI_OFF);   // this is a temporary line, to be removed after SDK update to 1.5.4
-  WiFi.mode(WIFI_STA);//*/
+  /*WiFi.persistent(false);
+  WiFi.mode(WIFI_OFF); // this is a temporary line, to be removed after SDK update to 1.5.4
+  WiFi.mode(WIFI_STA);*/
   // <<<<<<<<<
+
   WiFi.setSleepMode(WIFI_NONE_SLEEP);
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
   WiFi.begin(wifiSettings.ssid, wifiSettings.password);
-  
+
+  Serial.print("Connecting");
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.print(".");
   }
-  
+  Serial.println(" connected.");
+
   IPAddress ipAddress = WiFi.localIP();
-  
-  // Print local IP address
-  Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.println("IP address: ");
-  Serial.println(ipAddress);
-    
   IPAddress ipAddressLast(wifiSettings.lastIp[0], wifiSettings.lastIp[1], wifiSettings.lastIp[2], wifiSettings.lastIp[3]);
+  
+  Serial.print("IP address: ");
+  Serial.println(ipAddress);
+   
   if(ipAddress != ipAddressLast){
     Serial.println("IP address changed since last time.");
     wifiSettings.lastIp[0] = ipAddress[0];
@@ -262,7 +261,7 @@ void setup() {
   }
   MDNS.addService("http", "tcp", 80);
 */
-  //Initialize Webserver
+  // Initialize Webserver
   server.on("/",handleRoot);
   server.on("/index", HTTP_POST, handleIndex);
   server.on("/color-picker", HTTP_POST, handleColorPicker);
@@ -272,24 +271,23 @@ void setup() {
   server.begin();
   Serial.println("HTTP server started");
 
+  // Initialize WS2812 (NeoPixel) strip
   strip = new NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod >(ledCount);
   strip->Begin();
 
   loadColorPicker(buf, jsonBuffer);
-  Serial.println("ColorPicker loaded.");
   loadSingleColor(buf, jsonBuffer);
-  Serial.println("SingleColor loaded.");
   loadMultiColor(buf, jsonBuffer);
-  Serial.println("MultiColor loaded.");
   loadCurrentSettings(buf, jsonBuffer);
-  Serial.println("CurrentSettings loaded.");
+
+  isOn = 1; // todo delete
   
   applySettings();
-  Serial.println("Settings applied.");
+  Serial.println("NeoPixel settings loaded.");
 
+  Serial.print("Free heap after setup: ");Serial.println(ESP.getFreeHeap());
   Serial.println("Setup finished.");
   digitalWrite(gpioLedStatus, 1);
-  Serial.print("Heap end: ");Serial.println(ESP.getFreeHeap());
 }
 
 //=============================================================================================
