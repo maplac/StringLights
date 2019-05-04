@@ -39,6 +39,8 @@ int loadSingleColor(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &json
 void handleSingleColor(){
   digitalWrite(gpioLedProcessing, 1);
   Serial.println("Handling SingleColor");
+  bool error = false;
+  
   if(server.hasArg("type")){
     if(server.arg("type") == "color"){
       if(server.hasArg("r") && server.hasArg("g") && server.hasArg("b")){
@@ -73,19 +75,25 @@ void handleSingleColor(){
       strip->Show();
 
       if(!saveCurrentSettings()){
+        error = true;
         server.send(400,"text/html", "current_settings.js file open failed");
-        return;
       }
       
       }else{
+        error = true;
         server.send(400,"text/html", "r/g/b/ is missing");
       }
     }else{
+      error = true;
       server.send(400,"text/html", "unknown type");  
     }
   }else{
+    error = true;
     server.send(400,"text/html", "type is missing");
   }
-  server.send(200,"text/html", "OK");
+
+  if (!error)
+    server.send(200,"text/html", "OK");
+    
   digitalWrite(gpioLedProcessing, 0);
 }

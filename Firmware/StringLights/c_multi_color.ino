@@ -82,6 +82,8 @@ int loadMultiColor(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonB
 void handleMultiColor(){
   digitalWrite(gpioLedProcessing, 1);
   Serial.println("Handling MultiColor");
+  bool error = false;
+  
   if(server.hasArg("type") && server.hasArg("index")){
     int index = server.arg("index").toInt();
     if( index >= 0 || index < MULTI_COLOR_COUNT){
@@ -112,7 +114,7 @@ void handleMultiColor(){
                 String fileName = "/multi_color_settings_" + String(index) + ".js";
                 File file = SPIFFS.open(fileName, "w");
                 if (!file) {
-                    Serial.println("Opening failed.");
+                    error = true;
                     server.send(400,"text/html", "multi_color_settings_x.js file open failed");
                 }else{
                   file.print("{\"mc\":[");
@@ -134,7 +136,7 @@ void handleMultiColor(){
                   multiColorIndex = index;
                   file = SPIFFS.open("/multi_color_settings.js", "w");
                   if (!file) {
-                      Serial.println("Opening failed.");
+                      error = true;
                       server.send(400,"text/html", "multi_color_settings.js file open failed");
                   }else{
                     file.print("mcbasestr='{\"mcindex\":");
@@ -163,28 +165,32 @@ void handleMultiColor(){
                 strip->Show();
                 
                 if(!saveCurrentSettings()){
+                  error = true;
                   server.send(400,"text/html", "current_settings.js file open failed");
-                  return;
                 }
               }else{
+                error = true;
                 server.send(400,"text/html", "r/g/b/ length is out of range");
               }
             }else{
+              error = true;
               server.send(400,"text/html", "r/g/b/ lengths do not match");
             }
           }else{
+            error = true;
             server.send(400,"text/html", "r/g/b/ length is not divisible by 3");
           }
         }else{
+          error = true;
           server.send(400,"text/html", "r/g/b/ is missing");
         }
-      }else if(server.arg("type") == "rename"){
+      } else if(server.arg("type") == "rename"){
         String newName = server.arg("name");
         Serial.println("new name: " + newName);
         newName.toCharArray(multiColorNames[index], COLOR_NAME_LENGTH);
         File file = SPIFFS.open("/multi_color_settings.js", "w");
         if (!file) {
-            Serial.println("Opening failed.");
+            error = true;
             server.send(400,"text/html", "multi_color_settings.js file open failed");
         }else{
           file.print("mcbasestr='{\"mcindex\":");
@@ -204,16 +210,20 @@ void handleMultiColor(){
           file.close();
         }
       }else{
+        error = true;
         server.send(400,"text/html", "unknown type");
       }
     }else{
+      error = true;
       server.send(400,"text/html", "index out of range");
     }
   }else{
+    error = true;
     server.send(400,"text/html", "type is missing");
   }
-  server.send(200,"text/html", "OK");
+  
+  if (!error)
+    server.send(200,"text/html", "OK");
+    
   digitalWrite(gpioLedProcessing, 0);
 }
-
-

@@ -92,6 +92,7 @@ bool saveColorPickerSettings(){
 void handleColorPicker(){
   digitalWrite(gpioLedProcessing, 1);
   Serial.println("Handling ColorPicker");
+  bool error = false;
 
   if(server.hasArg("type")){
     if(server.hasArg("id")){
@@ -105,10 +106,12 @@ void handleColorPicker(){
             newName.toCharArray(savedNames[id], COLOR_NAME_LENGTH);
             //savedNames[id][newName.length()] = '\0';
             if(!saveColorPickerSettings()){
+              error = true;
               server.send(400,"text/html", "saving to file failed");
             }
             
           }else{
+            error = true;
             server.send(400,"text/html", "name is missing");
           }
         }else if(server.arg("type") == "save"){
@@ -125,23 +128,31 @@ void handleColorPicker(){
             savedColors[id][2] = (unsigned char) b;
 
             if(!saveColorPickerSettings()){
+              error = true;
               server.send(400,"text/html", "saving to file failed");
             }
           }else{
+            error = true;
             server.send(400,"text/html", "r/g/b/ is missing");
           }
         }else{
+          error = true;
           server.send(400,"text/html", "id out of range");
         }
       }else{
+        error = true;
          server.send(400,"text/html", "unknown type");
       }
     }else{
+      error = true;
       server.send(400,"text/html", "id is missing");
     }
   }else{
+    error = true;
     server.send(400,"text/html", "type is missing");
   }
-  server.send(200,"text/html", "OK");
+  if (!error)
+    server.send(200,"text/html", "OK");
+    
   digitalWrite(gpioLedProcessing, 0);
 }

@@ -75,6 +75,8 @@ int loadSystemSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &j
 void handleIndex(){
   digitalWrite(gpioLedProcessing, 1);
   Serial.println("Handling Index");
+  bool error = false;
+  
   if(server.hasArg("type")){
     String type = server.arg("type");
     if(type == "cmd"){
@@ -86,11 +88,12 @@ void handleIndex(){
           //digitalWrite(gpioLedHotSpot,0);
           isOn = false;
         }else{
+          error = true;
           server.send(400,"text/html", "unknown cmd");
-          return;
         }
         // todo save settings
       }else{
+        error = true;
         server.send(400,"text/html", "cmd is missing");
       }
     } else if (type == "settings"){
@@ -104,8 +107,8 @@ void handleIndex(){
         wifi_ssid.toCharArray(wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
         
         if (!saveSystemSettings()) {
+          error = true;
           server.send(400,"text/html", "new setting cannot be saved");
-          return;
         }
 
         if(server.hasArg("wifi_passwd")){
@@ -114,14 +117,13 @@ void handleIndex(){
           wifi_passwd.toCharArray(wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
           
           if (!savePassword()) {
+            error = true;
             server.send(400,"text/html", "new setting cannot be saved");
-            return;
           }
         }
-        
       } else {
+        error = true;
         server.send(400,"text/html", "led_count or wifi_ssid is missing");
-        return;
       }
     } else if (type == "settings_static"){
       if(server.hasArg("static_active") && server.hasArg("ip") && server.hasArg("subnet") && server.hasArg("gateway") && server.hasArg("dns")){
@@ -143,26 +145,29 @@ void handleIndex(){
             wifiSettings.dns[i] = stringToNum(dns.charAt(i * 3), dns.charAt((i * 3) + 1), dns.charAt((i * 3) + 2));
           }
           if (!saveSystemSettings()) {
+            error = true;
             server.send(400,"text/html", "new setting cannot be saved");
-            return;
           }
         } else {
+          error = true;
           server.send(400,"text/html", "ip, subnet, gateway or DNS doesn't have length 9");
-          return;
         }
       } else {
+        error = true;
         server.send(400,"text/html", "static_active, ip, subnet, gateway or DNS is missing");
-        return;
       }
     } else {
+      error = true;
       server.send(400,"text/html", "unknown type");
-      return;
     }
   }else{
+    error = true;
     server.send(400,"text/html", "type is missing");
-    return;
   }
-  server.send(200,"text/html", "OK");
+
+  if (!error)
+    server.send(200,"text/html", "OK");
+    
   digitalWrite(gpioLedProcessing, 0);
 }
 
@@ -222,4 +227,3 @@ bool savePassword(){
   file.close();
   return true;
 }
-

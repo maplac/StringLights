@@ -9,10 +9,12 @@ Transparentni mod kdy se rovnou nastavi led. Bez ukladani nastaveni do pameti.
 
 Dodelat on/off vypinani z webu.
 
-Kdyz je chyba, tak neposilat OK.
-
 Cekani na pripojeni k wifi presunout do loop();
 
 Opravit: Pri prepnuti na stranku multi color se zmeni barva led.
 
 Na webu zobrazit informace o zarizeni - volna pamet atp.
+
+Misto posledni ip adresy se zobrazuje soucasna adresa.
+
+Nejdrive zapnout ledky a pak pripojovat k wifi.
