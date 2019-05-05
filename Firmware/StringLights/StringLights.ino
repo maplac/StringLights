@@ -1,6 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
-#include <FS.h>   
+#include <FS.h>
 #include <ESP8266mDNS.h>
 #include <NeoPixelBus.h>
 #include <ArduinoJson.h>
@@ -13,7 +13,7 @@
 #define MAX_SETTINGS_FILE_SIZE  2048
 #define MAX_WIFI_CHAR_LENGTH    31
 
-struct wifi_struct{
+struct wifi_struct {
   char ssid[MAX_WIFI_CHAR_LENGTH];
   char password[MAX_WIFI_CHAR_LENGTH];
   unsigned char lastIp[4];
@@ -80,65 +80,66 @@ void handleIndex();
 void handleColorPicker();
 void handleSingleColor();
 void handleMultiColor();
+void handleTransparent();
 
 //=============================================================================================
 //=============================================================================================
 //=============================================================================================
 
-void handleInterruptBut1(){
+void handleInterruptBut1() {
   button1.lastDebounceTime = millis();
   button1.debouncing = true;
 }
-void handleInterruptBut2(){
+void handleInterruptBut2() {
   button2.lastDebounceTime = millis();
   button2.debouncing = true;
 }
 
-inline unsigned char stringToNum(char a, char b, char c){
+inline unsigned char stringToNum(char a, char b, char c) {
   return (a - 48) * 100 + (b - 48) * 10 + (c - 48);
 }
-void stringToArray(String &str, char arr[], int maxLength){
-  for(int i = 0; i < maxLength; i++) {
-    if (i == str.length()){
+void stringToArray(String &str, char arr[], int maxLength) {
+  for (int i = 0; i < maxLength; i++) {
+    if (i == str.length()) {
       arr[i] = '\0';
-    } else if (i > str.length()){
+    } else if (i > str.length()) {
       break;
     }
     arr[i] = str[i];
   }
 }
 
-void stringToArray(char *str, char arr[], int maxLength){
-  for(int i = 0; i < maxLength; i++) {
+void stringToArray(char *str, char arr[], int maxLength) {
+  for (int i = 0; i < maxLength; i++) {
     arr[i] = str[i];
-    if (arr[i] == '\0'){
+    if (arr[i] == '\0') {
       break;
     }
   }
 }
 
-void printIp(unsigned char ip[]){
-  Serial.print(ip[0]);Serial.print(".");
-  Serial.print(ip[1]);Serial.print(".");
-  Serial.print(ip[2]);Serial.print(".");
+void printIp(unsigned char ip[]) {
+  Serial.print(ip[0]); Serial.print(".");
+  Serial.print(ip[1]); Serial.print(".");
+  Serial.print(ip[2]); Serial.print(".");
   Serial.print(ip[3]);
 }
 
 //=============================================================================================
-void applySettings(){
-  if(isOn){
-    if(currentEffect == EFFECT_MULTI){
-      for(int i = 0; i < ledCount; ++i){
+void applySettings() {
+  if (isOn) {
+    if (currentEffect == EFFECT_MULTI) {
+      for (int i = 0; i < ledCount; ++i) {
         int index = i % multiColorLength;
         strip->SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
       }
-    }else if(currentEffect == EFFECT_SINGLE){
-      for(int i = 0; i < ledCount; ++i){
+    } else if (currentEffect == EFFECT_SINGLE) {
+      for (int i = 0; i < ledCount; ++i) {
         strip->SetPixelColor(i, RgbColor(singleColor[0], singleColor[1], singleColor[2]));
       }
     }
-  }else{
-    for(int i = 0; i < ledCount; ++i){
+  } else {
+    for (int i = 0; i < ledCount; ++i) {
       strip->SetPixelColor(i, RgbColor(0, 0, 0));
     }
   }
@@ -152,7 +153,7 @@ void setup() {
   Serial.println();
   delay(100);
 
-  Serial.print("Free heap at start: ");Serial.println(ESP.getFreeHeap());
+  Serial.print("Free heap at start: "); Serial.println(ESP.getFreeHeap());
 
   // Initialize GPIO
   pinMode(gpioLedStatus, OUTPUT);
@@ -165,7 +166,7 @@ void setup() {
   pinMode(gpioBut2, INPUT);
   attachInterrupt(digitalPinToInterrupt(gpioBut1), handleInterruptBut1, CHANGE);
   attachInterrupt(digitalPinToInterrupt(gpioBut2), handleInterruptBut2, CHANGE);
-  
+
   //Initialize File System
   SPIFFS.begin();
   Serial.println("File System Initialized");
@@ -174,17 +175,17 @@ void setup() {
   loadSystemSettings(buf, jsonBuffer);
   Serial.println("System settings loaded.");
 
-  // Override settings (for debugging) 
+  // Override settings (for debugging)
   //ledCount = 1;
   //stringToArray("unstuckunstuck", wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
   //stringToArray("Tenda", wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
-      
+
   /*
-  //Initialize AP Mode
-  WiFi.softAP(ssid);  //Password not used
-  IPAddress myIP = WiFi.softAPIP();
-  Serial.print("Web Server IP:");
-  Serial.println(myIP);
+    //Initialize AP Mode
+    WiFi.softAP(ssid);  //Password not used
+    IPAddress myIP = WiFi.softAPIP();
+    Serial.print("Web Server IP:");
+    Serial.println(myIP);
   */
 
   // Initialize WiFi
@@ -193,22 +194,22 @@ void setup() {
   Serial.print("Led count: ");
   Serial.println(ledCount);
   Serial.print("Last IP: ");
-  printIp(wifiSettings.lastIp);Serial.println("");
-  
-  if(wifiSettings.staticActive){
+  printIp(wifiSettings.lastIp); Serial.println("");
+
+  if (wifiSettings.staticActive) {
     Serial.println("Using static IP.");
     Serial.print("IP: ");
-    printIp(wifiSettings.staticIp);Serial.println("");
+    printIp(wifiSettings.staticIp); Serial.println("");
     Serial.print("Subnet mask: ");
-    printIp(wifiSettings.subnet);Serial.println("");
+    printIp(wifiSettings.subnet); Serial.println("");
     Serial.print("Gateway: ");
-    printIp(wifiSettings.gateway);Serial.println("");
+    printIp(wifiSettings.gateway); Serial.println("");
     Serial.print("DNS: ");
-    printIp(wifiSettings.dns);Serial.println("");
-    /*IPAddress ip(10,0,0,220);   
-    IPAddress gateway(10,0,0,138);   
-    IPAddress subnet(255,255,255,0);
-    IPAddress dns(8,8,8,8);*/
+    printIp(wifiSettings.dns); Serial.println("");
+    /*IPAddress ip(10,0,0,220);
+      IPAddress gateway(10,0,0,138);
+      IPAddress subnet(255,255,255,0);
+      IPAddress dns(8,8,8,8);*/
     IPAddress ip(wifiSettings.staticIp[0], wifiSettings.staticIp[1], wifiSettings.staticIp[2], wifiSettings.staticIp[3]);
     IPAddress gateway(wifiSettings.gateway[0], wifiSettings.gateway[1], wifiSettings.gateway[2], wifiSettings.gateway[3]);
     IPAddress subnet(wifiSettings.subnet[0], wifiSettings.subnet[1], wifiSettings.subnet[2], wifiSettings.subnet[3]);
@@ -217,13 +218,13 @@ void setup() {
   } else {
     Serial.println("Using DHCP.");
   }
-  
+
   //WiFi.hostname("StringLights");
-  
+
   // FIX >>>>>
   /*WiFi.persistent(false);
-  WiFi.mode(WIFI_OFF); // this is a temporary line, to be removed after SDK update to 1.5.4
-  WiFi.mode(WIFI_STA);*/
+    WiFi.mode(WIFI_OFF); // this is a temporary line, to be removed after SDK update to 1.5.4
+    WiFi.mode(WIFI_STA);*/
   // <<<<<<<<<
 
   WiFi.setSleepMode(WIFI_NONE_SLEEP);
@@ -240,11 +241,11 @@ void setup() {
 
   IPAddress ipAddress = WiFi.localIP();
   IPAddress ipAddressLast(wifiSettings.lastIp[0], wifiSettings.lastIp[1], wifiSettings.lastIp[2], wifiSettings.lastIp[3]);
-  
+
   Serial.print("IP address: ");
   Serial.println(ipAddress);
-   
-  if(ipAddress != ipAddressLast){
+
+  if (ipAddress != ipAddressLast) {
     Serial.println("IP address changed since last time.");
     wifiSettings.lastIp[0] = ipAddress[0];
     wifiSettings.lastIp[1] = ipAddress[1];
@@ -253,23 +254,14 @@ void setup() {
     saveSystemSettings();
   }
 
-/*
-  if (MDNS.begin("test")) {              // Start the mDNS responder for esp8266.local
-    Serial.println("mDNS responder started");
-  } else {
-    Serial.println("Error setting up MDNS responder!");
-  }
-  MDNS.addService("http", "tcp", 80);
-*/
-  // Initialize Webserver
-  server.on("/",handleRoot);
-  server.on("/index", HTTP_POST, handleIndex);
-  server.on("/color-picker", HTTP_POST, handleColorPicker);
-  server.on("/single-color", HTTP_POST, handleSingleColor);
-  server.on("/multi-color", HTTP_POST, handleMultiColor);
-  server.onNotFound(handleWebRequests);
-  server.begin();
-  Serial.println("HTTP server started");
+  /*
+    if (MDNS.begin("test")) {              // Start the mDNS responder for esp8266.local
+      Serial.println("mDNS responder started");
+    } else {
+      Serial.println("Error setting up MDNS responder!");
+    }
+    MDNS.addService("http", "tcp", 80);
+  */
 
   // Initialize WS2812 (NeoPixel) strip
   strip = new NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod >(ledCount);
@@ -282,10 +274,20 @@ void setup() {
 
   applySettings();
   Serial.println("NeoPixel settings loaded.");
-
-  Serial.print("Free heap after setup: ");Serial.println(ESP.getFreeHeap());
-  Serial.println("Setup finished.");
   digitalWrite(gpioLedStatus, 1);
+
+  // Initialize Webserver
+  server.on("/", handleRoot);
+  server.on("/index", HTTP_POST, handleIndex);
+  server.on("/color-picker", HTTP_POST, handleColorPicker);
+  server.on("/single-color", HTTP_POST, handleSingleColor);
+  server.on("/multi-color", HTTP_POST, handleMultiColor);
+  server.on("/transparent", HTTP_POST, handleTransparent);
+  server.onNotFound(handleWebRequests);
+  server.begin();
+  Serial.println("HTTP server started");
+  Serial.print("Free heap after setup: "); Serial.println(ESP.getFreeHeap());
+  Serial.println("Setup finished.");
 }
 
 //=============================================================================================
@@ -334,8 +336,3 @@ void loop() {
     }
   }
 }
-
-
-
-
- 
