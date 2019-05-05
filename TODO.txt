@@ -1,8 +1,6 @@
 Tlacitko na restart.
 
-Moznost zapnou hotspot.
-Vsechny adresy presmerovat do modulu.
-Hw prepinac pro vyber
+V modu soft-ap vsechny adresy presmerovat do modulu.
 
 Cekani na pripojeni k wifi presunout do loop();
 

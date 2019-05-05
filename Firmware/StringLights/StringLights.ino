@@ -35,7 +35,7 @@ struct button_struct {
 
 const int gpioLedStatus = 12;
 const int gpioLedProcessing = 13;
-const int gpioLedAcessPoint = 14;
+const int gpioSwitch1 = 14;
 const int gpioBut1 = 4;
 const int gpioBut2 = 5;
 const unsigned long debounceDelay = 50;
@@ -58,6 +58,8 @@ int multiColorIndex;
 char multiColorNames[MULTI_COLOR_COUNT][COLOR_NAME_LENGTH];
 int currentEffect;
 int isOn;
+int isSoftAP = 0;
+volatile int dummy = 0;
 
 // Allocate a buffer to store contents of files
 std::unique_ptr<char[]> buf(new char[MAX_SETTINGS_FILE_SIZE]);
@@ -161,8 +163,7 @@ void setup() {
   digitalWrite(gpioLedStatus, LOW);
   pinMode(gpioLedProcessing, OUTPUT);
   digitalWrite(gpioLedProcessing, LOW);
-  pinMode(gpioLedAcessPoint, OUTPUT);
-  digitalWrite(gpioLedAcessPoint, LOW);
+  pinMode(gpioSwitch1, INPUT);
   pinMode(gpioBut1, INPUT);
   pinMode(gpioBut2, INPUT);
   attachInterrupt(digitalPinToInterrupt(gpioBut1), handleInterruptBut1, CHANGE);
@@ -189,78 +190,105 @@ void setup() {
     Serial.println(myIP);
   */
 
+if(dummy){
+  pinMode(gpioLedStatus, OUTPUT);
+  digitalWrite(gpioLedStatus, LOW);
+  pinMode(gpioLedProcessing, OUTPUT);
+  digitalWrite(gpioLedProcessing, LOW);
+  pinMode(gpioSwitch1, INPUT);
+  pinMode(gpioBut1, INPUT);
+  pinMode(gpioBut2, INPUT);
+  attachInterrupt(digitalPinToInterrupt(gpioBut1), handleInterruptBut1, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(gpioBut2), handleInterruptBut2, CHANGE);
+}
+  isSoftAP = digitalRead(gpioSwitch1);
+
   // Initialize WiFi
-  Serial.print("Wifi SSID: ");
-  Serial.println(wifiSettings.ssid);
-  /*Serial.print("Wifi pwd: ");
-  Serial.println(wifiSettings.password);*/
-  Serial.print("Led count: ");
-  Serial.println(ledCount);
-  Serial.print("Last IP: ");
-  printIp(wifiSettings.lastIp); Serial.println("");
-
-  if (wifiSettings.staticActive) {
-    Serial.println("Using static IP.");
-    Serial.print("IP: ");
-    printIp(wifiSettings.staticIp); Serial.println("");
-    Serial.print("Subnet mask: ");
-    printIp(wifiSettings.subnet); Serial.println("");
-    Serial.print("Gateway: ");
-    printIp(wifiSettings.gateway); Serial.println("");
-    Serial.print("DNS: ");
-    printIp(wifiSettings.dns); Serial.println("");
-    /*IPAddress ip(10,0,0,220);
-      IPAddress gateway(10,0,0,138);
-      IPAddress subnet(255,255,255,0);
-      IPAddress dns(8,8,8,8);*/
-    IPAddress ip(wifiSettings.staticIp[0], wifiSettings.staticIp[1], wifiSettings.staticIp[2], wifiSettings.staticIp[3]);
-    IPAddress gateway(wifiSettings.gateway[0], wifiSettings.gateway[1], wifiSettings.gateway[2], wifiSettings.gateway[3]);
-    IPAddress subnet(wifiSettings.subnet[0], wifiSettings.subnet[1], wifiSettings.subnet[2], wifiSettings.subnet[3]);
-    IPAddress dns(wifiSettings.dns[0], wifiSettings.dns[1], wifiSettings.dns[2], wifiSettings.dns[3]);
-    WiFi.config(ip, dns, gateway, subnet);
+  if (isSoftAP) {
+    Serial.println("Using soft-AP.");
+    bool result = WiFi.softAP("StringLights01", "busylion");
+    if (result == true) {
+      Serial.println("Ready");
+    } else {
+      Serial.println("Failed!");
+    }
+    Serial.println("Wifi SSID: StringLights01");
+    Serial.println("Wifi password: busylion");
+    Serial.print("AP IP address: ");
+    Serial.println(WiFi.softAPIP());
   } else {
-    Serial.println("Using DHCP.");
+    Serial.print("Wifi SSID: ");
+    Serial.println(wifiSettings.ssid);
+    /*Serial.print("Wifi pwd: ");
+    Serial.println(wifiSettings.password);*/
+    Serial.print("Led count: ");
+    Serial.println(ledCount);
+    Serial.print("Last IP: ");
+    printIp(wifiSettings.lastIp); Serial.println("");
+  
+    if (wifiSettings.staticActive) {
+      Serial.println("Using static IP.");
+      Serial.print("IP: ");
+      printIp(wifiSettings.staticIp); Serial.println("");
+      Serial.print("Subnet mask: ");
+      printIp(wifiSettings.subnet); Serial.println("");
+      Serial.print("Gateway: ");
+      printIp(wifiSettings.gateway); Serial.println("");
+      Serial.print("DNS: ");
+      printIp(wifiSettings.dns); Serial.println("");
+      /*IPAddress ip(10,0,0,220);
+        IPAddress gateway(10,0,0,138);
+        IPAddress subnet(255,255,255,0);
+        IPAddress dns(8,8,8,8);*/
+      IPAddress ip(wifiSettings.staticIp[0], wifiSettings.staticIp[1], wifiSettings.staticIp[2], wifiSettings.staticIp[3]);
+      IPAddress gateway(wifiSettings.gateway[0], wifiSettings.gateway[1], wifiSettings.gateway[2], wifiSettings.gateway[3]);
+      IPAddress subnet(wifiSettings.subnet[0], wifiSettings.subnet[1], wifiSettings.subnet[2], wifiSettings.subnet[3]);
+      IPAddress dns(wifiSettings.dns[0], wifiSettings.dns[1], wifiSettings.dns[2], wifiSettings.dns[3]);
+      WiFi.config(ip, dns, gateway, subnet);
+    } else {
+      Serial.println("Using DHCP.");
+    }
+  
+    //WiFi.hostname("StringLights");
+  
+    // FIX >>>>>
+    /*WiFi.persistent(false);
+      WiFi.mode(WIFI_OFF); // this is a temporary line, to be removed after SDK update to 1.5.4
+      WiFi.mode(WIFI_STA);*/
+    // <<<<<<<<<
+  
+    WiFi.setSleepMode(WIFI_NONE_SLEEP);
+    WiFi.persistent(false);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(wifiSettings.ssid, wifiSettings.password);
+  
+    Serial.print("Connecting");
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(1000);
+      Serial.print(".");
+    }
+    Serial.println(" connected.");
+
+    IPAddress ipAddress = WiFi.localIP();
+    IPAddress ipAddressLast(wifiSettings.currentIp[0], wifiSettings.currentIp[1], wifiSettings.currentIp[2], wifiSettings.currentIp[3]);
+  
+    Serial.print("IP address: ");
+    Serial.println(ipAddress);
+  
+    if (ipAddress != ipAddressLast) {
+      Serial.println("IP address changed since last time.");
+    }
+    wifiSettings.lastIp[0] = wifiSettings.currentIp[0];
+    wifiSettings.lastIp[1] = wifiSettings.currentIp[1];
+    wifiSettings.lastIp[2] = wifiSettings.currentIp[2];
+    wifiSettings.lastIp[3] = wifiSettings.currentIp[3];
+    wifiSettings.currentIp[0] = ipAddress[0];
+    wifiSettings.currentIp[1] = ipAddress[1];
+    wifiSettings.currentIp[2] = ipAddress[2];
+    wifiSettings.currentIp[3] = ipAddress[3];
+    saveSystemSettings();
   }
-
-  //WiFi.hostname("StringLights");
-
-  // FIX >>>>>
-  /*WiFi.persistent(false);
-    WiFi.mode(WIFI_OFF); // this is a temporary line, to be removed after SDK update to 1.5.4
-    WiFi.mode(WIFI_STA);*/
-  // <<<<<<<<<
-
-  WiFi.setSleepMode(WIFI_NONE_SLEEP);
-  WiFi.persistent(false);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(wifiSettings.ssid, wifiSettings.password);
-
-  Serial.print("Connecting");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.print(".");
-  }
-  Serial.println(" connected.");
-
-  IPAddress ipAddress = WiFi.localIP();
-  IPAddress ipAddressLast(wifiSettings.currentIp[0], wifiSettings.currentIp[1], wifiSettings.currentIp[2], wifiSettings.currentIp[3]);
-
-  Serial.print("IP address: ");
-  Serial.println(ipAddress);
-
-  if (ipAddress != ipAddressLast) {
-    Serial.println("IP address changed since last time.");
-  }
-  wifiSettings.lastIp[0] = wifiSettings.currentIp[0];
-  wifiSettings.lastIp[1] = wifiSettings.currentIp[1];
-  wifiSettings.lastIp[2] = wifiSettings.currentIp[2];
-  wifiSettings.lastIp[3] = wifiSettings.currentIp[3];
-  wifiSettings.currentIp[0] = ipAddress[0];
-  wifiSettings.currentIp[1] = ipAddress[1];
-  wifiSettings.currentIp[2] = ipAddress[2];
-  wifiSettings.currentIp[3] = ipAddress[3];
-  saveSystemSettings();
-
+  
   /*
     if (MDNS.begin("test")) {              // Start the mDNS responder for esp8266.local
       Serial.println("mDNS responder started");
