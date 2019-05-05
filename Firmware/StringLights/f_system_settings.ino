@@ -35,6 +35,7 @@ int loadSystemSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &j
   wifiSettings.staticActive = json["static_active"];
 
   for(int i = 0; i < 4; ++i){
+    wifiSettings.currentIp[i] = json["current_ip_address"][i];
     wifiSettings.lastIp[i] = json["last_ip_address"][i];
     wifiSettings.staticIp[i] = json["static_ip"][i];
     wifiSettings.subnet[i] = json["subnet"][i];
@@ -184,7 +185,12 @@ bool saveSystemSettings(){
   }
   file.print("settingsstr='{\"led_count\":");file.print(ledCount);
   file.print(",\"wifi_ssid\":\"");file.print(String(wifiSettings.ssid));
-  file.print("\",\"last_ip_address\":[");
+  file.print("\",\"current_ip_address\":[");
+  file.print(String(wifiSettings.currentIp[0]));file.print(",");
+  file.print(String(wifiSettings.currentIp[1]));file.print(",");
+  file.print(String(wifiSettings.currentIp[2]));file.print(",");
+  file.print(String(wifiSettings.currentIp[3]));file.print("]");
+  file.print(",\"last_ip_address\":[");
   file.print(String(wifiSettings.lastIp[0]));file.print(",");
   file.print(String(wifiSettings.lastIp[1]));file.print(",");
   file.print(String(wifiSettings.lastIp[2]));file.print(",");
@@ -226,9 +232,9 @@ bool savePassword(){
   if(!file){
     return false;
   }
-  file.print("'{\"wifi_passwd\":\"");
+  file.print("{\"wifi_passwd\":\"");
   file.print(String(wifiSettings.password));
-  file.print("\"}'");
+  file.print("\"}");
   file.close();
   return true;
 }

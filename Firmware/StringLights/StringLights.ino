@@ -17,6 +17,7 @@ struct wifi_struct {
   char ssid[MAX_WIFI_CHAR_LENGTH];
   char password[MAX_WIFI_CHAR_LENGTH];
   unsigned char lastIp[4];
+  unsigned char currentIp[4];
   bool staticActive;
   unsigned char staticIp[4];
   unsigned char subnet[4];
@@ -191,6 +192,8 @@ void setup() {
   // Initialize WiFi
   Serial.print("Wifi SSID: ");
   Serial.println(wifiSettings.ssid);
+  /*Serial.print("Wifi pwd: ");
+  Serial.println(wifiSettings.password);*/
   Serial.print("Led count: ");
   Serial.println(ledCount);
   Serial.print("Last IP: ");
@@ -214,7 +217,7 @@ void setup() {
     IPAddress gateway(wifiSettings.gateway[0], wifiSettings.gateway[1], wifiSettings.gateway[2], wifiSettings.gateway[3]);
     IPAddress subnet(wifiSettings.subnet[0], wifiSettings.subnet[1], wifiSettings.subnet[2], wifiSettings.subnet[3]);
     IPAddress dns(wifiSettings.dns[0], wifiSettings.dns[1], wifiSettings.dns[2], wifiSettings.dns[3]);
-    WiFi.config(ip, subnet, gateway, dns);
+    WiFi.config(ip, dns, gateway, subnet);
   } else {
     Serial.println("Using DHCP.");
   }
@@ -240,19 +243,23 @@ void setup() {
   Serial.println(" connected.");
 
   IPAddress ipAddress = WiFi.localIP();
-  IPAddress ipAddressLast(wifiSettings.lastIp[0], wifiSettings.lastIp[1], wifiSettings.lastIp[2], wifiSettings.lastIp[3]);
+  IPAddress ipAddressLast(wifiSettings.currentIp[0], wifiSettings.currentIp[1], wifiSettings.currentIp[2], wifiSettings.currentIp[3]);
 
   Serial.print("IP address: ");
   Serial.println(ipAddress);
 
   if (ipAddress != ipAddressLast) {
     Serial.println("IP address changed since last time.");
-    wifiSettings.lastIp[0] = ipAddress[0];
-    wifiSettings.lastIp[1] = ipAddress[1];
-    wifiSettings.lastIp[2] = ipAddress[2];
-    wifiSettings.lastIp[3] = ipAddress[3];
-    saveSystemSettings();
   }
+  wifiSettings.lastIp[0] = wifiSettings.currentIp[0];
+  wifiSettings.lastIp[1] = wifiSettings.currentIp[1];
+  wifiSettings.lastIp[2] = wifiSettings.currentIp[2];
+  wifiSettings.lastIp[3] = wifiSettings.currentIp[3];
+  wifiSettings.currentIp[0] = ipAddress[0];
+  wifiSettings.currentIp[1] = ipAddress[1];
+  wifiSettings.currentIp[2] = ipAddress[2];
+  wifiSettings.currentIp[3] = ipAddress[3];
+  saveSystemSettings();
 
   /*
     if (MDNS.begin("test")) {              // Start the mDNS responder for esp8266.local
@@ -286,6 +293,7 @@ void setup() {
   server.onNotFound(handleWebRequests);
   server.begin();
   Serial.println("HTTP server started");
+  
   Serial.print("Free heap after setup: "); Serial.println(ESP.getFreeHeap());
   Serial.println("Setup finished.");
 }
