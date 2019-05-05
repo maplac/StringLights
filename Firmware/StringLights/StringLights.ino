@@ -280,8 +280,6 @@ void setup() {
   loadMultiColor(buf, jsonBuffer);
   loadCurrentSettings(buf, jsonBuffer);
 
-  isOn = 1; // todo delete
-  
   applySettings();
   Serial.println("NeoPixel settings loaded.");
 

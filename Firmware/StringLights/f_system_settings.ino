@@ -82,16 +82,21 @@ void handleIndex(){
     if(type == "cmd"){
       if(server.hasArg("cmd")){
         if(server.arg("cmd") == "on"){
-          isOn = true;
-          //digitalWrite(gpioLedHotSpot,1);
+          isOn = 1;
         }else if(server.arg("cmd") == "off"){
-          //digitalWrite(gpioLedHotSpot,0);
-          isOn = false;
+          isOn = 0;
         }else{
           error = true;
           server.send(400,"text/html", "unknown cmd");
         }
-        // todo save settings
+        if (!error) {
+          if (saveCurrentSettings()) {
+            applySettings();
+          } else {
+            error = true;
+            server.send(400,"text/html", "setting cannot be saved");
+          }
+        }
       }else{
         error = true;
         server.send(400,"text/html", "cmd is missing");

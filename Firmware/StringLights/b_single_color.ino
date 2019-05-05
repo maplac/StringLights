@@ -64,6 +64,7 @@ void handleSingleColor(){
       file.close();
 
       currentEffect = EFFECT_SINGLE;
+      isOn = 1;
       
       singleColor[0] = (unsigned char) (r & 0xFF);
       singleColor[1] = (unsigned char) (g & 0xFF);
@@ -71,7 +72,7 @@ void handleSingleColor(){
      
       for(int i = 0; i < ledCount; ++i){
         strip->SetPixelColor(i, RgbColor(r,g,b));
-       }
+      }
       strip->Show();
 
       if(!saveCurrentSettings()){

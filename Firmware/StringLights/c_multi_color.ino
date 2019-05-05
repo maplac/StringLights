@@ -157,6 +157,7 @@ void handleMultiColor(){
                   }
                 }
                 currentEffect = EFFECT_MULTI;
+                isOn = 1;
                 
                 for(int i = 0; i < ledCount; ++i){
                   int index = i % multiColorLength;
