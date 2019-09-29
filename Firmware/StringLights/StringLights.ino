@@ -1,7 +1,7 @@
-#include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
-#include <FS.h>
-#include <ESP8266mDNS.h>
+//#include <ESP8266mDNS.h>
+#include <WiFi.h>
+#include <WebServer.h>
+#include <SPIFFS.h>
 #include <NeoPixelBus.h>
 #include <ArduinoJson.h>
 
@@ -10,7 +10,7 @@
 #define EFFECT_SINGLE       0
 #define EFFECT_MULTI        1
 #define MULTI_COLOR_COUNT   10
-#define MAX_SETTINGS_FILE_SIZE  2048
+#define MAX_SETTINGS_FILE_SIZE  8192
 #define MAX_WIFI_CHAR_LENGTH    31
 
 struct wifi_struct {
@@ -33,10 +33,10 @@ struct button_struct {
   unsigned long lastPressTime = 0;
 } button1, button2;
 
-const int gpioLedStatus = 12;
-const int gpioLedProcessing = 13;
-const int gpioSwitch1 = 14;
-const int gpioBut1 = 4;
+const int gpioLedStatus = 4;
+const int gpioLedProcessing = 16;
+const int gpioSwitch1 = 18;
+const int gpioBut1 = 17;
 const int gpioBut2 = 5;
 const unsigned long debounceDelay = 50;
 const unsigned long longPressTime = 2000;
@@ -46,7 +46,7 @@ volatile int butCounter = 0;
 volatile int lastButCounter = 0;
 
 NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod > *strip;
-ESP8266WebServer server(80);
+WebServer server(80);
 
 unsigned char savedColors[SAVED_COLORS_COUNT][3] ;
 char savedNames[SAVED_COLORS_COUNT][COLOR_NAME_LENGTH];
@@ -170,7 +170,9 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(gpioBut2), handleInterruptBut2, CHANGE);
 
   //Initialize File System
-  SPIFFS.begin();
+  if(!SPIFFS.begin(true)){
+    Serial.println("An Error has occurred while mounting SPIFFS");
+  }
   Serial.println("File System Initialized");
 
   // Load system setting
@@ -190,17 +192,19 @@ void setup() {
     Serial.println(myIP);
   */
 
-if(dummy){
-  pinMode(gpioLedStatus, OUTPUT);
-  digitalWrite(gpioLedStatus, LOW);
-  pinMode(gpioLedProcessing, OUTPUT);
-  digitalWrite(gpioLedProcessing, LOW);
-  pinMode(gpioSwitch1, INPUT);
-  pinMode(gpioBut1, INPUT);
-  pinMode(gpioBut2, INPUT);
-  attachInterrupt(digitalPinToInterrupt(gpioBut1), handleInterruptBut1, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(gpioBut2), handleInterruptBut2, CHANGE);
-}
+  // some dummy code to make the wifi work
+//  if(dummy){
+//    pinMode(gpioLedStatus, OUTPUT);
+//    digitalWrite(gpioLedStatus, LOW);
+//    pinMode(gpioLedProcessing, OUTPUT);
+//    digitalWrite(gpioLedProcessing, LOW);
+//    pinMode(gpioSwitch1, INPUT);
+//    pinMode(gpioBut1, INPUT);
+//    pinMode(gpioBut2, INPUT);
+//    attachInterrupt(digitalPinToInterrupt(gpioBut1), handleInterruptBut1, CHANGE);
+//    attachInterrupt(digitalPinToInterrupt(gpioBut2), handleInterruptBut2, CHANGE);
+//  }
+  
   isSoftAP = digitalRead(gpioSwitch1);
 
   // Initialize WiFi
@@ -257,8 +261,8 @@ if(dummy){
       WiFi.mode(WIFI_STA);*/
     // <<<<<<<<<
   
-    WiFi.setSleepMode(WIFI_NONE_SLEEP);
-    WiFi.persistent(false);
+    //WiFi.setSleepMode(WIFI_NONE_SLEEP);
+    //WiFi.persistent(false);
     WiFi.mode(WIFI_STA);
     WiFi.begin(wifiSettings.ssid, wifiSettings.password);
   
@@ -299,7 +303,7 @@ if(dummy){
   */
 
   // Initialize WS2812 (NeoPixel) strip
-  strip = new NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod >(ledCount);
+  strip = new NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod >(ledCount, 21);
   strip->Begin();
 
   loadColorPicker(buf, jsonBuffer);
