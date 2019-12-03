@@ -1,0 +1,1 @@
+Resistors R4 and R5 must be lower then 470 Ohm. 100 Ohm works fine.
