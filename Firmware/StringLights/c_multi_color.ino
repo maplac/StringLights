@@ -1,37 +1,12 @@
-int loadMultiColor(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer){
-  File file = SPIFFS.open("/multi_color_settings.js", "r");
-  if (!file) {
-      Serial.println("Opening multi_color_settings.js failed.");
-      return -1;
-  }
-  size_t size = file.size();
-  if (size > MAX_SETTINGS_FILE_SIZE) {
-    Serial.println("multi_color_settings is too large");
-    file.close();
-    return -1;
-  }
-  
-  if(!file.seek(11)){// mcbasestr='
-    Serial.println("seek failed");
-    file.close();
-    return -1;
-  }
-  size -= 12;
-  
-  file.readBytes(charBuffer.get(), size);
-  file.close();
-
-  charBuffer.get()[size] = 0;
-  JsonObject& json = jsonBuffer.parseObject(charBuffer.get());
-  if (!json.success()) {
-    Serial.println("Failed to parse multi_color_settings.js file");
+int loadMultiColor(){
+  if (readJson("/multi_color_settings.js", 11)) {
+    Serial.print("Reading JSON from file \"/multi_color_settings.js\" failed. "); Serial.println(errorMessage);
     return -1;
   }
 
-  multiColorIndex = json["mcindex"];
- 
-  for(int i = 0; i < json["mcnames"].size(); ++i){
-    String newName = json["mcnames"][i];
+  multiColorIndex = jsonDoc["mcindex"];
+  for(int i = 0; i < jsonDoc["mcnames"].size(); ++i){
+    String newName = jsonDoc["mcnames"][i];
     newName.toCharArray(multiColorNames[i], COLOR_NAME_LENGTH);
   }
 
@@ -39,48 +14,32 @@ int loadMultiColor(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonB
   
   String fileName;
   fileName = "/multi_color_settings_" + String(multiColorIndex) + ".js";
-  file = SPIFFS.open(fileName, "r");
-  if (!file) {
-      Serial.println("Opening multi_color_settings_x.js failed.");
-      return -1;
-  }
-  size = file.size();
-  if (size > MAX_SETTINGS_FILE_SIZE) {
-    Serial.println("multi_color_settings_x is too large");
-    file.close();
-    return -1;
-  }
-  /*
-  if(!file.seek(11)){// mcbasestr='
-    Serial.println("multi_color_settings_x seek failed");
-    file.close();
-    return;
-  }
-  size -= 12;*/
-  
-  file.readBytes(charBuffer.get(), size);
-  file.close();
-
-  charBuffer.get()[size] = 0;
-  JsonObject& json2 = jsonBuffer.parseObject(charBuffer.get());
-  if (!json2.success()) {
-    Serial.println("Failed to parse multi_color_settings_x.js file");
+  char nameArr[32];
+  fileName.toCharArray(nameArr, fileName.length() + 1);
+  //Serial.println(nameArr);
+  if (readJson(nameArr, 0)) {
+    Serial.print("Reading JSON from file \"/multi_color_settings_#.js\" failed. "); Serial.println(errorMessage);
     return -1;
   }
   
-  multiColorLength = json2["mc"].size();
+  multiColorLength = jsonDoc["mc"].size();
 
+  if (multiColorLength > MAX_MULTICOLOR_LENGTH) {
+    Serial.println("Multicolor length reduced to ");Serial.println(MAX_MULTICOLOR_LENGTH);
+    multiColorLength = MAX_MULTICOLOR_LENGTH;
+  }
+  
   for(int i = 0; i < multiColorLength; ++i){
-    multiColor[i][0] = json2["mc"][i][0];
-    multiColor[i][1] = json2["mc"][i][1];
-    multiColor[i][2] = json2["mc"][i][2];
+    multiColor[i][0] = jsonDoc["mc"][i][0];
+    multiColor[i][1] = jsonDoc["mc"][i][1];
+    multiColor[i][2] = jsonDoc["mc"][i][2];
   }
   return 0;
 }
 
 //=============================================================================================
 void handleMultiColor(){
-  digitalWrite(gpioLedProcessing, 1);
+  setLedColor(2, BLUE);
   Serial.println("Handling MultiColor");
   bool error = false;
   
@@ -163,7 +122,6 @@ void handleMultiColor(){
                   int index = i % multiColorLength;
                   strip->SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
                 }
-                strip->Show();
                 
                 if(!saveCurrentSettings()){
                   error = true;
@@ -223,8 +181,10 @@ void handleMultiColor(){
     server.send(400,"text/html", "type is missing");
   }
   
-  if (!error)
+  if (!error) {
     server.send(200,"text/html", "OK");
+    strip->Show();
+  }
     
-  digitalWrite(gpioLedProcessing, 0);
+  setLedColor(2, NONE);
 }

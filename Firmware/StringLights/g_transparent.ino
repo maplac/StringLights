@@ -1,5 +1,5 @@
 void handleTransparent(){
-  digitalWrite(gpioLedProcessing, 1);
+  setLedColor(2, BLUE);
   Serial.println("Handling transparent");
   bool error = false;
   
@@ -69,7 +69,6 @@ void handleTransparent(){
                   strip->SetPixelColor(index, RgbColor(red, green, blue));
                 }//*/
               }
-              strip->Show();
             } else {
               error = true;
               server.send(400,"text/html", "r/g/b/ length is out of range");
@@ -95,8 +94,10 @@ void handleTransparent(){
     server.send(400,"text/html", "Type is missing.");
   }
 
-  if (!error)
+  if (!error) {
     server.send(200,"text/html", "OK");
+    strip->Show();
+  }
     
-  digitalWrite(gpioLedProcessing, 0);
+  setLedColor(2, NONE);
 }

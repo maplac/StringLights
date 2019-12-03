@@ -1,43 +1,20 @@
 
-int loadSingleColor(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer){
-  File file = SPIFFS.open("/single_color_settings.js", "r");
-  if (!file) {
-      Serial.println("Opening single_color_settings.js failed.");
-      return -1;
-  }
-  size_t size = file.size();
-  if (size > MAX_SETTINGS_FILE_SIZE) {
-    Serial.println("single_color_settings is too large");
-    file.close();
+int loadSingleColor(){
+  if (readJson("/single_color_settings.js", 7)) {
+    Serial.print("Reading JSON from file \"/single_color_settings.js\" failed. "); Serial.println(errorMessage);
     return -1;
   }
   
-  if(!file.seek(7)){
-    Serial.println("seek failed");
-    file.close();
-    return -1;
-  }
-  size -= 8;
-  
-  file.readBytes(charBuffer.get(), size);
-  file.close();
-  
-  charBuffer.get()[size] = 0;
-  JsonObject& json = jsonBuffer.parseObject(charBuffer.get());
-  if (!json.success()) {
-    Serial.println("Failed to parse single_color_settings.js file");
-    return -1;
-  }
-  singleColor[0] = json["sc"][0];
-  singleColor[1] = json["sc"][1];
-  singleColor[2] = json["sc"][2];
+  singleColor[0] = jsonDoc["sc"][0];
+  singleColor[1] = jsonDoc["sc"][1];
+  singleColor[2] = jsonDoc["sc"][2];
 
   return 0;
 }
 
 //=============================================================================================
 void handleSingleColor(){
-  digitalWrite(gpioLedProcessing, 1);
+  setLedColor(2, BLUE);
   Serial.println("Handling SingleColor");
   bool error = false;
   
@@ -71,9 +48,8 @@ void handleSingleColor(){
       singleColor[2] = (unsigned char) (b & 0xFF);
      
       for(int i = 0; i < ledCount; ++i){
-        strip->SetPixelColor(i, RgbColor(r,g,b));
+        strip->SetPixelColor(i, RgbColor(singleColor[0], singleColor[1], singleColor[2]));
       }
-      strip->Show();
 
       if(!saveCurrentSettings()){
         error = true;
@@ -93,8 +69,10 @@ void handleSingleColor(){
     server.send(400,"text/html", "type is missing");
   }
 
-  if (!error)
+  if (!error) {
     server.send(200,"text/html", "OK");
-    
-  digitalWrite(gpioLedProcessing, 0);
+    strip->Show();
+  }
+  
+  setLedColor(2, NONE);
 }

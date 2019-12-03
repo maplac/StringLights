@@ -1,29 +1,12 @@
 
-int loadCurrentSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer){
-  File file = SPIFFS.open("/current_settings.js", "r");
-  if (!file) {
-      Serial.println("Opening current_settings.js failed.");
-      return -1;
-  }
-  size_t size = file.size();
-  if (size > MAX_SETTINGS_FILE_SIZE) {
-    Serial.println("current_settings is too large");
-    file.close();
-    return -1;
-  }
-  
-  file.readBytes(charBuffer.get(), size);
-  file.close();
-
-  charBuffer.get()[size] = 0;
-  JsonObject& json = jsonBuffer.parseObject(charBuffer.get());
-  if (!json.success()) {
-    Serial.println("Failed to parse current_settings.js file");
+int loadCurrentSettings(){
+  if (readJson("/current_settings.js", 0)) {
+    Serial.print("Reading JSON from file \"/current_settings.js\" failed. "); Serial.println(errorMessage);
     return -1;
   }
 
-  currentEffect = json["effect"];
-  isOn = json["isOn"];
+  currentEffect = jsonDoc["effect"];
+  isOn = jsonDoc["isOn"];
   
   return 0;
 }

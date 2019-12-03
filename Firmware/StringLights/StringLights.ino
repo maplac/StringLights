@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 
 #define SAVED_COLORS_COUNT  30
+#define MAX_LED_COUNT       1000
 #define COLOR_NAME_LENGTH   13 // 12 chars + \0
 #define EFFECT_SINGLE       0
 #define EFFECT_MULTI        1
@@ -33,11 +34,16 @@ struct button_struct {
   unsigned long lastPressTime = 0;
 } button1, button2;
 
-const int gpioLedStatus = 4;
-const int gpioLedProcessing = 16;
-const int gpioSwitch1 = 18;
-const int gpioBut1 = 17;
-const int gpioBut2 = 5;
+const int gpioLed2B = 33;
+const int gpioLed2G = 32;
+const int gpioLed2R = 25;
+const int gpioLed1B = 27;
+const int gpioLed1G = 26;
+const int gpioLed1R = 14;
+//const int gpioLedProcessing = 16;
+const int gpioSwitch1 = 16;
+const int gpioBut1 = 22;
+const int gpioBut2 = 23;
 const unsigned long debounceDelay = 50;
 const unsigned long longPressTime = 2000;
 int ledCount = 1;
@@ -51,7 +57,7 @@ WebServer server(80);
 unsigned char savedColors[SAVED_COLORS_COUNT][3] ;
 char savedNames[SAVED_COLORS_COUNT][COLOR_NAME_LENGTH];
 unsigned char singleColor[3];
-unsigned char multiColor[SAVED_COLORS_COUNT][3];
+unsigned char multiColor[MAX_LED_COUNT][3];
 int multiColorLength;
 int multiColorCount = 10;
 int multiColorIndex;
@@ -62,14 +68,18 @@ int isSoftAP = 0;
 volatile int dummy = 0;
 
 // Allocate a buffer to store contents of files
-std::unique_ptr<char[]> buf(new char[MAX_SETTINGS_FILE_SIZE]);
-DynamicJsonBuffer jsonBuffer(1000);
+//std::unique_ptr<char[]> buf(new char[MAX_SETTINGS_FILE_SIZE]);
+//DynamicJsonBuffer jsonBuffer(1000);
+char *fileBuffer;
+StaticJsonDocument<MAX_SETTINGS_FILE_SIZE> jsonDoc;
+String errorMessage;
 
-int loadSingleColor(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer);
-int loadColorPicker(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer);
-int loadMultiColor(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer);
-int loadCurrentSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer);
-int loadSystemSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer);
+
+int loadSingleColor();
+int loadColorPicker();
+int loadMultiColor();
+int loadCurrentSettings();
+int loadSystemSettings();
 
 bool saveColorPickerSettings();
 bool saveCurrentSettings();
@@ -88,6 +98,46 @@ void handleTransparent();
 //=============================================================================================
 //=============================================================================================
 //=============================================================================================
+#define NONE   0x0
+#define RED   0x1
+#define GREEN 0x2
+#define BLUE  0x4
+
+void setLedColor(int led, int colorMask) {
+  if (led == 1) {
+    if (colorMask & RED) {
+      digitalWrite(gpioLed1R, HIGH);
+    } else {
+      digitalWrite(gpioLed1R, LOW);
+    }
+    if (colorMask & GREEN) {
+      digitalWrite(gpioLed1G, HIGH);
+    } else {
+      digitalWrite(gpioLed1G, LOW);
+    }
+    if (colorMask & BLUE) {
+      digitalWrite(gpioLed1B, HIGH);
+    } else {
+      digitalWrite(gpioLed1B, LOW);
+    }
+  } else if (led == 2){
+    if (colorMask & RED) {
+      digitalWrite(gpioLed2R, HIGH);
+    } else {
+      digitalWrite(gpioLed2R, LOW);
+    }
+    if (colorMask & GREEN) {
+      digitalWrite(gpioLed2G, HIGH);
+    } else {
+      digitalWrite(gpioLed2G, LOW);
+    }
+    if (colorMask & BLUE) {
+      digitalWrite(gpioLed2B, HIGH);
+    } else {
+      digitalWrite(gpioLed2B, LOW);
+    }
+  }
+}
 
 void handleInterruptBut1() {
   button1.lastDebounceTime = millis();
@@ -129,6 +179,48 @@ void printIp(unsigned char ip[]) {
 }
 
 //=============================================================================================
+int readJson(char *fileName, int dataOffset) {
+  File file = SPIFFS.open(fileName, "r");
+  if (!file) {
+    errorMessage = "File cannot be opened";
+    return -1;
+  }
+  
+  size_t fileSize = file.size();
+  if (fileSize > MAX_SETTINGS_FILE_SIZE) {
+    file.close();
+    errorMessage = "File is too big.";
+    return -1;
+  }
+  
+  int bufIndex = 0;
+  for (int i = 0; i < fileSize; i++) {
+    if (i < dataOffset) {
+      file.read();
+      continue;
+    }
+    if (i == (fileSize - 1) && dataOffset != 0){
+      file.read();
+      continue;
+    }
+    fileBuffer[bufIndex++] = file.read();
+  }
+  fileBuffer[bufIndex] = '\0';
+  file.close();
+
+  //Serial.print("size: "); Serial.println(fileSize);
+  //Serial.print("buf: "); Serial.println(fileBuffer);
+  
+  DeserializationError err = deserializeJson(jsonDoc, fileBuffer);
+  if (err) {
+    errorMessage = "Parsing JSON failed: ";
+    errorMessage.concat(err.c_str());
+    return -1;
+  }
+  return 0;
+}
+
+//=============================================================================================
 void applySettings() {
   if (isOn) {
     if (currentEffect == EFFECT_MULTI) {
@@ -151,32 +243,49 @@ void applySettings() {
 
 //=============================================================================================
 void setup() {
+  int freeHeap = ESP.getFreeHeap();
+  
+  fileBuffer = new char[MAX_SETTINGS_FILE_SIZE];
   Serial.begin(115200);
   //Serial.setDebugOutput(true);
   Serial.println();
-  delay(100);
-
-  Serial.print("Free heap at start: "); Serial.println(ESP.getFreeHeap());
+  //delay(100);
 
   // Initialize GPIO
-  pinMode(gpioLedStatus, OUTPUT);
-  digitalWrite(gpioLedStatus, LOW);
-  pinMode(gpioLedProcessing, OUTPUT);
-  digitalWrite(gpioLedProcessing, LOW);
+  pinMode(gpioLed2B, OUTPUT);
+  pinMode(gpioLed2G, OUTPUT);
+  pinMode(gpioLed2R, OUTPUT);
+  pinMode(gpioLed1B, OUTPUT);
+  pinMode(gpioLed1G, OUTPUT);
+  pinMode(gpioLed1R, OUTPUT);
+  setLedColor(1, GREEN);
+  setLedColor(2, NONE);
   pinMode(gpioSwitch1, INPUT);
   pinMode(gpioBut1, INPUT);
   pinMode(gpioBut2, INPUT);
-  attachInterrupt(digitalPinToInterrupt(gpioBut1), handleInterruptBut1, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(gpioBut2), handleInterruptBut2, CHANGE);
 
   //Initialize File System
   if(!SPIFFS.begin(true)){
     Serial.println("An Error has occurred while mounting SPIFFS");
+    setLedColor(1, RED);
+    return;
   }
   Serial.println("File System Initialized");
 
+  //=============================================================================================
+  /*Serial.println("Loading single color settings...");
+  if (loadSingleColor() < 0) {
+    Serial.println("Load settings failed");
+  }
+  Serial.println("Settings loaded");*/
+  //=============================================================================================
+
   // Load system setting
-  loadSystemSettings(buf, jsonBuffer);
+  if (loadSystemSettings() < 0){
+    Serial.println("Load system setting failed.");
+    setLedColor(1, RED);
+    return;
+  }
   Serial.println("System settings loaded.");
 
   // Override settings (for debugging)
@@ -194,8 +303,8 @@ void setup() {
 
   // some dummy code to make the wifi work
 //  if(dummy){
-//    pinMode(gpioLedStatus, OUTPUT);
-//    digitalWrite(gpioLedStatus, LOW);
+//    pinMode(gpioLed2B, OUTPUT);
+//    digitalWrite(gpioLed2B, LOW);
 //    pinMode(gpioLedProcessing, OUTPUT);
 //    digitalWrite(gpioLedProcessing, LOW);
 //    pinMode(gpioSwitch1, INPUT);
@@ -206,8 +315,14 @@ void setup() {
 //  }
   
   isSoftAP = digitalRead(gpioSwitch1);
-
+  //*
   // Initialize WiFi
+  WiFi.persistent(false);
+  WiFi.disconnect();
+  WiFi.mode(WIFI_OFF);
+  WiFi.mode(WIFI_STA);
+  //delay(100);
+  
   if (isSoftAP) {
     Serial.println("Using soft-AP.");
     bool result = WiFi.softAP("StringLights01", "busylion");
@@ -223,8 +338,8 @@ void setup() {
   } else {
     Serial.print("Wifi SSID: ");
     Serial.println(wifiSettings.ssid);
-    /*Serial.print("Wifi pwd: ");
-    Serial.println(wifiSettings.password);*/
+    //Serial.print("Wifi pwd: ");
+    //Serial.println(wifiSettings.password);
     Serial.print("Led count: ");
     Serial.println(ledCount);
     Serial.print("Last IP: ");
@@ -240,10 +355,10 @@ void setup() {
       printIp(wifiSettings.gateway); Serial.println("");
       Serial.print("DNS: ");
       printIp(wifiSettings.dns); Serial.println("");
-      /*IPAddress ip(10,0,0,220);
-        IPAddress gateway(10,0,0,138);
-        IPAddress subnet(255,255,255,0);
-        IPAddress dns(8,8,8,8);*/
+      //IPAddress ip(10,0,0,220);
+        //IPAddress gateway(10,0,0,138);
+        //IPAddress subnet(255,255,255,0);
+        //IPAddress dns(8,8,8,8);
       IPAddress ip(wifiSettings.staticIp[0], wifiSettings.staticIp[1], wifiSettings.staticIp[2], wifiSettings.staticIp[3]);
       IPAddress gateway(wifiSettings.gateway[0], wifiSettings.gateway[1], wifiSettings.gateway[2], wifiSettings.gateway[3]);
       IPAddress subnet(wifiSettings.subnet[0], wifiSettings.subnet[1], wifiSettings.subnet[2], wifiSettings.subnet[3]);
@@ -256,9 +371,9 @@ void setup() {
     //WiFi.hostname("StringLights");
   
     // FIX >>>>>
-    /*WiFi.persistent(false);
-      WiFi.mode(WIFI_OFF); // this is a temporary line, to be removed after SDK update to 1.5.4
-      WiFi.mode(WIFI_STA);*/
+      //WiFi.persistent(false);
+      //WiFi.mode(WIFI_OFF); // this is a temporary line, to be removed after SDK update to 1.5.4
+      //WiFi.mode(WIFI_STA);
     // <<<<<<<<<
   
     //WiFi.setSleepMode(WIFI_NONE_SLEEP);
@@ -292,6 +407,7 @@ void setup() {
     wifiSettings.currentIp[3] = ipAddress[3];
     saveSystemSettings();
   }
+  //*/
   
   /*
     if (MDNS.begin("test")) {              // Start the mDNS responder for esp8266.local
@@ -306,15 +422,27 @@ void setup() {
   strip = new NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod >(ledCount, 21);
   strip->Begin();
 
-  loadColorPicker(buf, jsonBuffer);
-  loadSingleColor(buf, jsonBuffer);
-  loadMultiColor(buf, jsonBuffer);
-  loadCurrentSettings(buf, jsonBuffer);
+  int res = 0;
+  res += loadColorPicker();
+  res += loadSingleColor();
+  res += loadMultiColor();
+  res += loadCurrentSettings();
 
+  if (res != 0) {
+    Serial.println("Load color settings failed.");
+    setLedColor(1, RED);
+    return;
+  }
+   
   applySettings();
-  Serial.println("NeoPixel settings loaded.");
-  digitalWrite(gpioLedStatus, 1);
-
+  Serial.println("Color settings loaded.");
+  Serial.print("Single color: ");
+  Serial.print(singleColor[0]);Serial.print(", ");
+  Serial.print(singleColor[1]);Serial.print(", ");
+  Serial.print(singleColor[2]);Serial.println("");
+  Serial.print("Multi color: index = ");Serial.println(multiColorIndex);
+  Serial.print("Current effect: ");Serial.println(currentEffect);
+   
   // Initialize Webserver
   server.on("/", handleRoot);
   server.on("/index", HTTP_POST, handleIndex);
@@ -325,9 +453,14 @@ void setup() {
   server.onNotFound(handleWebRequests);
   server.begin();
   Serial.println("HTTP server started");
-  
+
+  attachInterrupt(digitalPinToInterrupt(gpioBut1), handleInterruptBut1, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(gpioBut2), handleInterruptBut2, CHANGE);
+
+  Serial.print("Free heap at start:    "); Serial.println(freeHeap);
   Serial.print("Free heap after setup: "); Serial.println(ESP.getFreeHeap());
   Serial.println("Setup finished.");
+  setLedColor(1, BLUE);
 }
 
 //=============================================================================================
@@ -350,6 +483,10 @@ void loop() {
           Serial.println("But1 long press");
         } else {
           Serial.println("But1 short press");
+          for(int i = 0; i < 60; ++i){
+            strip->SetPixelColor(i, RgbColor(250,250,250));
+          }
+          strip->Show();
         }
       }
       button1.state = butState;
@@ -370,6 +507,10 @@ void loop() {
           Serial.println("But2 long press");
         } else {
           Serial.println("But2 short press");
+          for(int i = 0; i < ledCount; ++i){
+            strip->SetPixelColor(i, RgbColor(singleColor[0], singleColor[1], singleColor[2]));
+          }
+          strip->Show();
         }
       }
       button2.state = butState;

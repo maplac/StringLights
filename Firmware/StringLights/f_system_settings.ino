@@ -1,72 +1,31 @@
 
-int loadSystemSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer){
-  File file = SPIFFS.open("/index_settings.js", "r");
-  if (!file) {
-      Serial.println("Opening current_settings.js failed.");
-      return -1;
-  }
-  size_t size = file.size();
-  if (size > MAX_SETTINGS_FILE_SIZE) {
-    Serial.println("current_settings is too large");
-    file.close();
+int loadSystemSettings(){
+  if (readJson("/index_settings.js", 13)) {
+    Serial.print("Reading JSON from file \"/index_settings.js\" failed. "); Serial.println(errorMessage);
     return -1;
   }
 
-  if(!file.seek(13)){
-    Serial.println("index_settings.js seek failed");
-    file.close();
-    return -1;
-  }
-  size -= 14;
-  
-  file.readBytes(charBuffer.get(), size);
-  file.close();
-
-  charBuffer.get()[size] = 0;
-  JsonObject& json = jsonBuffer.parseObject(charBuffer.get());
-  if (!json.success()) {
-    Serial.println("Failed to parse index_settings.js file");
-    return -1;
-  }
-
-  String wifi_ssid = json["wifi_ssid"];
+  String wifi_ssid = jsonDoc["wifi_ssid"];
   wifi_ssid.toCharArray(wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
-  ledCount = json["led_count"];
-  wifiSettings.staticActive = json["static_active"];
+  ledCount = jsonDoc["led_count"];
+  wifiSettings.staticActive = jsonDoc["static_active"];
 
   for(int i = 0; i < 4; ++i){
-    wifiSettings.currentIp[i] = json["current_ip_address"][i];
-    wifiSettings.lastIp[i] = json["last_ip_address"][i];
-    wifiSettings.staticIp[i] = json["static_ip"][i];
-    wifiSettings.subnet[i] = json["subnet"][i];
-    wifiSettings.gateway[i] = json["gateway"][i];
-    wifiSettings.dns[i] = json["dns"][i];
+    wifiSettings.currentIp[i] = jsonDoc["current_ip_address"][i];
+    wifiSettings.lastIp[i] = jsonDoc["last_ip_address"][i];
+    wifiSettings.staticIp[i] = jsonDoc["static_ip"][i];
+    wifiSettings.subnet[i] = jsonDoc["subnet"][i];
+    wifiSettings.gateway[i] = jsonDoc["gateway"][i];
+    wifiSettings.dns[i] = jsonDoc["dns"][i];
   }
 
   // file content is: {"wifi_passwd":"thePassword"}
-  file = SPIFFS.open("/passwd.js", "r");
-  if (!file) {
-      Serial.println("Opening passwd.js failed.");
-      return -1;
-  }
-  size = file.size();
-  if (size > MAX_SETTINGS_FILE_SIZE) {
-    Serial.println("passwd.js is too large");
-    file.close();
-    return -1;
-  }
- 
-  file.readBytes(charBuffer.get(), size);
-  file.close();
-
-  charBuffer.get()[size] = 0;
-  JsonObject& json2 = jsonBuffer.parseObject(charBuffer.get());
-  if (!json2.success()) {
-    Serial.println("Failed to parse passwd.js file");
+   if (readJson("/passwd.js", 0)) {
+    Serial.print("Reading JSON from file \"/passwd.js\" failed. "); Serial.println(errorMessage);
     return -1;
   }
 
-  String wifi_passwd = json2["wifi_passwd"];
+  String wifi_passwd = jsonDoc["wifi_passwd"];
   wifi_passwd.toCharArray(wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
 
   return 0;
@@ -74,7 +33,7 @@ int loadSystemSettings(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &j
 
 //=============================================================================================
 void handleIndex(){
-  digitalWrite(gpioLedProcessing, 1);
+  setLedColor(2, BLUE);
   Serial.println("Handling Index");
   bool error = false;
   
@@ -105,8 +64,8 @@ void handleIndex(){
     } else if (type == "settings"){
       if(server.hasArg("led_count") && server.hasArg("wifi_ssid")){
         ledCount = server.arg("led_count").toInt();
-        if(ledCount > 1000){
-          ledCount = 1000;
+        if(ledCount > MAX_LED_COUNT){
+          ledCount = MAX_LED_COUNT;
         }
         String wifi_ssid = server.arg("wifi_ssid");
         Serial.println("new wifi SSID: " + wifi_ssid);
@@ -174,7 +133,7 @@ void handleIndex(){
   if (!error)
     server.send(200,"text/html", "OK");
     
-  digitalWrite(gpioLedProcessing, 0);
+  setLedColor(2, NONE);
 }
 
 //=============================================================================================

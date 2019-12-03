@@ -1,57 +1,17 @@
 
-int loadColorPicker(std::unique_ptr<char[]> &charBuffer, DynamicJsonBuffer &jsonBuffer){
-  File file = SPIFFS.open("/color_picker_settings.js", "r");
-  if (!file) {
-      Serial.println("Opening color_picker_settings.js failed.");
-      return -1;
-  }
-  size_t size = file.size();
-  if (size > MAX_SETTINGS_FILE_SIZE) {
-    Serial.println("color_picker_settings is too large");
-    file.close();
-    return -1;
-  }
-  
-  if(!file.seek(7)){
-    Serial.println("seek failed");
-    file.close();
-    return -1;
-  }
-  size -= 8;
-  
-  
-
-  // We don't use String here because ArduinoJson library requires the input
-  // buffer to be mutable. If you don't use ArduinoJson, you may as well
-  // use configFile.readString instead.
-  file.readBytes(charBuffer.get(), size);
-  file.close();
-  
-  charBuffer.get()[size] = 0;
-
-  /*for(int i = 0; i < size; i++){
-    Serial.write(buf.get()[i]);
-  }
-  Serial.println("");*/
-  
-  //char str[] = "{\"q\":[1,2,3],\"C\":[[11,22,33],[111,222,333]],\"names\":[\"jedna\",\"dva\",\"-\"]}";
-  //StaticJsonBuffer<1000> jsonBuffer;
- 
-
-  JsonObject& json = jsonBuffer.parseObject(charBuffer.get());
-
-  if (!json.success()) {
-    Serial.println("Failed to parse color_picker_settings.js file");
+int loadColorPicker(){
+  if (readJson("/color_picker_settings.js", 7)) {
+    Serial.print("Reading JSON from file \"/color_picker_settings.js\" failed. "); Serial.println(errorMessage);
     return -1;
   }
 
   for(int i = 0; i < SAVED_COLORS_COUNT; ++i){
-    savedColors[i][0] = json["C"][i][0];
-    savedColors[i][1] = json["C"][i][1];
-    savedColors[i][2] = json["C"][i][2];
-    String newName = json["names"][i];
+    savedColors[i][0] = jsonDoc["C"][i][0];
+    savedColors[i][1] = jsonDoc["C"][i][1];
+    savedColors[i][2] = jsonDoc["C"][i][2];
+    String newName = jsonDoc["names"][i];
     newName.toCharArray(savedNames[i], COLOR_NAME_LENGTH);
-    //savedNames[i][newName.length()] = '\0';
+    savedNames[i][newName.length()] = '\0';
   }
 
   return 0;
@@ -90,7 +50,7 @@ bool saveColorPickerSettings(){
 
 //=============================================================================================
 void handleColorPicker(){
-  digitalWrite(gpioLedProcessing, 1);
+  setLedColor(2, BLUE);
   Serial.println("Handling ColorPicker");
   bool error = false;
 
@@ -154,5 +114,5 @@ void handleColorPicker(){
   if (!error)
     server.send(200,"text/html", "OK");
     
-  digitalWrite(gpioLedProcessing, 0);
+  setLedColor(2, NONE);
 }
