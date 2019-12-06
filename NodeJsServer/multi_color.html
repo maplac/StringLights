@@ -34,6 +34,14 @@
 	  <div><button onclick="clickedAdd()">Add</button><button onclick="clickedRemove()">Remove</button><button id="but_undo" onclick="clickedUndo()">Undo</button></div>
 	  <div><button onclick="clickedSelectAll()">Select all</button><button onclick="clickedSelectNone()">Select none</button><button onclick="clickedSelectInvert()">Select invert</button></div>
 	  <div><button onclick="clickedSelectN()">Select every N</button><div onclick="clickedSelectNNumberMinus()" class="button_small unselectable">-</div><input type="number" min="1" max="999" value="2" id="select_n_number" title="N"><div onclick="clickedSelectNNumberPlus()" class="button_small unselectable">+</div><div onclick="clickedSelectNOffsetMinus()" class="button_small unselectable">-</div><input type="number" min="0" max="999" value="0" id="select_n_offset" title="Offset"><div onclick="clickedSelectNOffsetPlus()" class="button_small unselectable">+</div></div>
+		<div class="color_assignment_container">
+			<label><span class="color_assignment_item">
+				<span class="label_text">Repeat</span><input id="color_assignment_repeat" type="radio" name="radio_assignment" value="0" onclick="clickedAssign()"><span class="checkmark_radio"></span>
+			</span></label>
+			<label><span class="color_assignment_item">
+				<span class="label_text">Spread</span><input id="color_assignment_spread" type="radio" name="radio_assignment" value="1" onclick="clickedAssign()"><span class="checkmark_radio"></span>
+			</span></label>
+		</div>
 	  <div id="color_list">
 	    <div id="coloritem_0" class="color_item">
 		  <span class="color_item_num">1</span><input type="checkbox" class="color_item_check"><span class="color_item_name">123 456 789</span>

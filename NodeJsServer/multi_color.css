@@ -36,7 +36,7 @@
 	cursor: pointer;
 }
 .button_icon img {
-	posigion:relative;
+	position:relative;
 	margin-left: 10px;
 	margin-top: 10px;
 }
@@ -145,6 +145,57 @@
   -webkit-transform: rotate(45deg);
   -ms-transform: rotate(45deg);
   transform: rotate(45deg);
+}
+
+/*===========================================*/
+.color_assignment_container {
+	/*display: inline-block;*/
+	margin-top: 10px;
+	margin-left: 7px;
+}
+.color_assignment_item {
+	cursor: pointer;
+	color: white;
+}
+.label_text {
+	top: -8px;
+	position: relative;
+}
+.color_assignment_item input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+.checkmark_radio {
+  position: relative;
+  display: inline-block;
+  /*line-height: 28px;*/
+  border: solid white 2px;
+  /*background-color: #1a1a1a;
+  color: #1a1a1a;*/
+  height: 28px;
+  width: 28px;
+  border-radius: 50%;
+  margin-left: 7px;
+  margin-right: 15px;
+}
+.checkmark_radio:after {
+  content: "";
+  position: relative;
+  display: none;
+}
+.color_assignment_item input:checked ~ .checkmark_radio:after {
+  display: block;
+}
+.color_assignment_item .checkmark_radio:after {
+ 	top: 9px;
+	left: 9px;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: #FF5733;
 }
 
  /* The container must be positioned relative: */

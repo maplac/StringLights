@@ -13,6 +13,8 @@
 #define MULTI_COLOR_COUNT   10
 #define MAX_SETTINGS_FILE_SIZE  8192
 #define MAX_WIFI_CHAR_LENGTH    31
+#define MULTICOLOR_ASSIGNMENT_REPEAT  0
+#define MULTICOLOR_ASSIGNMENT_SPREAD  1
 
 struct wifi_struct {
   char ssid[MAX_WIFI_CHAR_LENGTH];
@@ -61,6 +63,7 @@ unsigned char multiColor[MAX_LED_COUNT][3];
 int multiColorLength;
 int multiColorCount = 10;
 int multiColorIndex;
+int multiColorAssignment = 0;
 char multiColorNames[MULTI_COLOR_COUNT][COLOR_NAME_LENGTH];
 int currentEffect;
 int isOn;
@@ -224,9 +227,19 @@ int readJson(char *fileName, int dataOffset) {
 void applySettings() {
   if (isOn) {
     if (currentEffect == EFFECT_MULTI) {
-      for (int i = 0; i < ledCount; ++i) {
-        int index = i % multiColorLength;
-        strip->SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
+      if (multiColorAssignment == MULTICOLOR_ASSIGNMENT_SPREAD) {
+        int denominator = ceil(ledCount/multiColorLength);
+        for(int i = 0; i < ledCount; ++i){
+          int index = floor(i/denominator);
+          if (index >= multiColorLength) // should not happen
+            index = multiColorLength - 1;
+          strip->SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
+        }
+      } else {
+        for(int i = 0; i < ledCount; ++i){
+          int index = i % multiColorLength;
+          strip->SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
+        }
       }
     } else if (currentEffect == EFFECT_SINGLE) {
       for (int i = 0; i < ledCount; ++i) {

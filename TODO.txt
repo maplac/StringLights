@@ -14,6 +14,4 @@ Pro dlouhe stisknuti tlacitka proves akci jeste pred pustenim tlacitka.
 
 V multicolor vybirat index zadanim textu. Jako vyber stranek pri tisku.
 
-V multi color umoznit mapovat mene barev na vsechny pixely. Napr pro 3 barvy rozdelit retezec na tretiny.
-
 Maska pro StringLightsRevA nema pady pro smd.

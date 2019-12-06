@@ -6,6 +6,7 @@ var mcCount = 0;
 var mcIndex = 0;
 var mcNames = [];
 var mc = [];
+var mcAssign = 0;
 
 function sendSettings(){
 	var r = "", g = "", b = "";
@@ -15,7 +16,7 @@ function sendSettings(){
 		g += numToString(mc[i][1]);
 		b += numToString(mc[i][2]);
 	}
-	sendPost("multi-color","type=color"+"&index="+mcIndex+"&r="+r+"&g="+g+"&b="+b);
+	sendPost("multi-color","type=color&assignment="+mcAssign+"&index="+mcIndex+"&r="+r+"&g="+g+"&b="+b);
 }
 
 function numToString(num, length = 3){
@@ -292,6 +293,15 @@ function clickedRenameSlot(){
 	sendPost("multi-color","type=rename&index="+mcIndex+"&name="+res);
 }
 
+function clickedAssign(){
+	if (document.getElementById("color_assignment_spread").checked) {
+		mcAssign = 1;
+	} else {
+		mcAssign = 0;
+	}
+	sendSettings();
+}
+
 function createColorList(){
 	var a = document.getElementById("color_list");
 	
@@ -416,6 +426,14 @@ function requestSettings(index){
 			var mcTemp = JSON.parse(this.responseText);
 			mc = Array.from(mcTemp.mc);
 			mcIndex = mcIndexRequest;
+			mcAssign = mcTemp.mcassign;
+			if (mcAssign === 1) {
+				document.getElementById("color_assignment_spread").checked = true;
+				mcAssign = 1;
+			} else {
+				document.getElementById("color_assignment_repeat").checked = true;
+				mcAssign = 0;
+			}
 			createColorList();
 			saveHistory();
 			document.getElementById("but_undo").disabled = true;
