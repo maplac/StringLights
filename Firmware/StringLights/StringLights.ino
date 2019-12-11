@@ -34,6 +34,7 @@ struct button_struct {
   volatile unsigned long lastDebounceTime = 0;
   volatile bool debouncing = false;
   unsigned long lastPressTime = 0;
+  bool longPressEnabled = false;
 } button1, button2;
 
 const int gpioLed2B = 33;
@@ -47,7 +48,7 @@ const int gpioSwitch1 = 16;
 const int gpioBut1 = 22;
 const int gpioBut2 = 23;
 const unsigned long debounceDelay = 50;
-const unsigned long longPressTime = 2000;
+const unsigned long longPressTime = 1000;
 int ledCount = 1;
 
 volatile int butCounter = 0;
@@ -97,6 +98,9 @@ void handleColorPicker();
 void handleSingleColor();
 void handleMultiColor();
 void handleTransparent();
+
+void handleButton1();
+void handleButton2();
 
 //=============================================================================================
 //=============================================================================================
@@ -480,53 +484,6 @@ void setup() {
 void loop() {
   //MDNS.update();
   server.handleClient();
-
-  if (button1.debouncing) {
-    if ((millis() - button1.lastDebounceTime) > debounceDelay) {
-      button1.debouncing = false;
-      int butState = digitalRead(gpioBut1);
-      // button pressed
-      if ( (button1.state == 1) && (butState == 0)) {
-        //Serial.println("But1 pressed");
-        button1.lastPressTime = millis();
-      }
-      // button released
-      if ( (button1.state == 0) && (butState == 1)) {
-        if ((millis() - button1.lastPressTime) > longPressTime) {
-          Serial.println("But1 long press");
-        } else {
-          Serial.println("But1 short press");
-          for(int i = 0; i < 60; ++i){
-            strip->SetPixelColor(i, RgbColor(250,250,250));
-          }
-          strip->Show();
-        }
-      }
-      button1.state = butState;
-    }
-  }
-  if (button2.debouncing) {
-    if ((millis() - button2.lastDebounceTime) > debounceDelay) {
-      button2.debouncing = false;
-      int butState = digitalRead(gpioBut2);
-      // button pressed
-      if ( (button2.state == 1) && (butState == 0)) {
-        //Serial.println("But2 pressed");
-        button2.lastPressTime = millis();
-      }
-      // button released
-      if ( (button2.state == 0) && (butState == 1)) {
-        if ((millis() - button2.lastPressTime) > longPressTime) {
-          Serial.println("But2 long press");
-        } else {
-          Serial.println("But2 short press");
-          for(int i = 0; i < ledCount; ++i){
-            strip->SetPixelColor(i, RgbColor(singleColor[0], singleColor[1], singleColor[2]));
-          }
-          strip->Show();
-        }
-      }
-      button2.state = butState;
-    }
-  }
+  handleButton1();
+  handleButton2();
 }
