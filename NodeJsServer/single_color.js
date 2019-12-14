@@ -1,110 +1,104 @@
+var sc = [];
+var scIndex = 0;
+
 function colorChanged(){
-	repaintSelected();
-	sendPost("single-color","type=color"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
-	//sendPost("color-picker","type=color&"+"&r="+cp.c[0]+"&g="+cp.c[1]+"&b="+cp.c[2]);
+	setColor();
+	sendSettings();
 }
 
-function savedColorChanged(id){
-	var a = document.getElementById("sel_"+id);
-	a.style.backgroundColor = 'rgb('+cp.C[id][0]+','+cp.C[id][1]+','+cp.C[id][2]+')';
-	a.style.color=getTextColor(cp.C[id]);
-	a.innerHTML = cp.names[id];
-	repaintSelected();
-}
-
-function repaintSelected(){
-	var x = document.getElementById('sel_selected');
-	var colorIndex = savedColorIndex(cp.c);
-	if(colorIndex >= 0){
-		x.innerHTML = cp.names[colorIndex];
-	}else{
-		x.innerHTML = "-";
-	}
-	x.style.backgroundColor='rgb('+cp.c[0]+','+cp.c[1]+','+cp.c[2]+')';
-	x.style.color = getTextColor(cp.c);
-}
-
-function loadSingleColor(){
-
-	var a, b, c, cs;
-	cs = document.getElementById("custom-select");
-	
-	// visible selected item
-	a = document.createElement("DIV");
-	a.setAttribute("class", "select-selected");
-	a.setAttribute("id", "sel_selected");
+function setColor(){
+	var a = document.getElementById("coloritemname_"+scIndex);
+	sc[scIndex] = Array.from(cp.c);
 	a.style.backgroundColor='rgb('+cp.c[0]+','+cp.c[1]+','+cp.c[2]+')';
 	a.style.color=getTextColor(cp.c);
 	var colorIndex = savedColorIndex(cp.c);
 	if(colorIndex >= 0){
 		a.innerHTML = cp.names[colorIndex];
 	}else{
-		a.innerHTML = "-";
+		a.innerHTML = colorToString(cp.c);
 	}
-	a.addEventListener("click", function(e) {
-		// When the select box is clicked, close any other select boxes, and open/close the current select box:
-		e.stopPropagation();
-		closeAllSelect(this);
-		this.nextSibling.classList.toggle("select-hide");
-		this.classList.toggle("select-arrow-active");
-	});
-	cs.appendChild(a);
+}
+
+function sendSettings(){
+	sendPost("single-color","type=color&index="+scIndex+"&r="+sc[scIndex][0]+"&g="+sc[scIndex][1]+"&b="+sc[scIndex][2]);
+}
+
+function savedColorChanged(id){// called from color picker when color is saved or renamed
+	loadSingleColor();
+}
+
+function clickedRadio(e) {
+	var id=e.target.id.split("_")[1];
+	scIndex = id;
+	console.log(id);
+	sendSettings();
+}
+
+function colorItemNameDoubleClicked(e){
+	var id=e.target.id.split("_")[1];
+	colorPickerSetColor(sc[id]);
+	e.stopPropagation();
+}
 	
-	// items in the option list
-	b = document.createElement("DIV");
-	b.setAttribute("class", "select-items select-hide");
-	for(var i=0;i<cp.C.length;i++){
-		c = document.createElement("DIV");
-		c.setAttribute("id", "sel_"+i);
-		c.setAttribute("class", "unselectable");
-		c.style.backgroundColor = 'rgb('+cp.C[i][0]+','+cp.C[i][1]+','+cp.C[i][2]+')';
-		c.style.color=getTextColor(cp.C[i]);
-		var colorIndex = savedColorIndex(cp.C[i]);
-		console.log(colorIndex);
+function loadSingleColor(){
+	var a = document.getElementById("color_list");
+	
+	// remove all
+	while (a.firstChild) {
+		a.removeChild(a.firstChild);
+	}
+	
+	// create new
+	for(var i = 0; i < sc.length; i++){
+		var b = document.createElement("DIV");
+		b.setAttribute("class", "color_item");
+		
+		var c = document.createElement("SPAN");
+		c.setAttribute("class", "color_item_num unselectable");
+		c.innerHTML = (i+1).toString();
+		b.appendChild(c);
+		
+		c = document.createElement("INPUT");
+		c.setAttribute("class", "color_item_check");
+		c.setAttribute("type", "radio");
+		c.setAttribute("name", "color_radio");
+		c.setAttribute("id", "colorradio_"+i);
+		c.addEventListener("change", clickedRadio, false);
+		b.appendChild(c);
+		
+		c = document.createElement("SPAN");
+		c.setAttribute("class", "checkmark unselectable");
+		c.innerHTML = ".";
+		b.appendChild(c);
+		
+		c = document.createElement("SPAN");
+		c.setAttribute("class", "color_item_name unselectable");
+		c.setAttribute("id", "coloritemname_" + i);
+		c.addEventListener("dblclick", colorItemNameDoubleClicked, false);
+		c.style.backgroundColor='rgb('+sc[i][0]+','+sc[i][1]+','+sc[i][2]+')';
+		c.style.color=getTextColor(sc[i]);
+		var colorIndex = savedColorIndex(sc[i]);
 		if(colorIndex >= 0){
 			c.innerHTML = cp.names[colorIndex];
 		}else{
-			c.innerHTML = colorToString(cp.C[i]);
+			c.innerHTML = colorToString(sc[i]);
 		}
 		b.appendChild(c);
+		
+		// label makes the whole line clickable for (un)checking the checkbox
+		var d = document.createElement("LABEL");
+		d.appendChild(b);
+		a.appendChild(d);
 	}
-	// add event listener for clicking on an item in the list
-	b.addEventListener('click', function(e) {
-		var id=e.target.id.split("_")[1];
-		clickedLoad(document.getElementById("but_"+id));
-	});
-	cs.appendChild(b);
-
-	var d = document.getElementById('sel_selected');// stejne jako "a"
+	document.getElementById("colorradio_"+scIndex).checked = true;
 }
 
 window.onload=function(){
   cp=JSON.parse(cpstr);
   var scTemp = JSON.parse(scstr);
   sc = scTemp.sc;
-  cp.c = Array.from(sc);
+  
+  scIndex = scTemp.index;
   loadColorPicker();
   loadSingleColor();
 }
-
-function closeAllSelect(elmnt) {
-  var x, y, i, arrNo = [];
-  x = document.getElementsByClassName("select-items");
-  y = document.getElementsByClassName("select-selected");
-  for (i = 0; i < y.length; i++) {
-    if (elmnt == y[i]) {
-      arrNo.push(i)
-    } else {
-      y[i].classList.remove("select-arrow-active");
-    }
-  }
-  for (i = 0; i < x.length; i++) {
-    if (arrNo.indexOf(i)) {
-      x[i].classList.add("select-hide");
-    }
-  }
-}
-
-document.addEventListener("click", closeAllSelect); 
-
-

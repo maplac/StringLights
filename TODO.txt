@@ -15,3 +15,5 @@ V multicolor vybirat index zadanim textu. Jako vyber stranek pri tisku.
 Maska pro StringLightsRevA nema pady pro smd.
 
 V multicolor se spatne formatuje skrolovani, kdyz je nastavenych hodne barev.
+
+Pri skrolovani HW tlacitkem preskakovat cerne barvy. V single i multi color.

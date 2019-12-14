@@ -11,6 +11,7 @@
 #define EFFECT_SINGLE       0
 #define EFFECT_MULTI        1
 #define MULTI_COLOR_COUNT   10
+#define SINGLE_COLOR_COUNT   10
 #define MAX_SETTINGS_FILE_SIZE  8192
 #define MAX_WIFI_CHAR_LENGTH    31
 #define MULTICOLOR_ASSIGNMENT_REPEAT  0
@@ -59,10 +60,11 @@ WebServer server(80);
 
 unsigned char savedColors[SAVED_COLORS_COUNT][3] ;
 char savedNames[SAVED_COLORS_COUNT][COLOR_NAME_LENGTH];
-unsigned char singleColor[3];
+unsigned char singleColor[SINGLE_COLOR_COUNT][3];
+int singleColorIndex;
 unsigned char multiColor[MAX_LED_COUNT][3];
 int multiColorLength;
-int multiColorCount = 10;
+//int multiColorCount = 10;
 int multiColorIndex;
 int multiColorAssignment = 0;
 char multiColorNames[MULTI_COLOR_COUNT][COLOR_NAME_LENGTH];
@@ -86,6 +88,7 @@ int loadCurrentSettings();
 int loadSystemSettings();
 
 bool saveColorPickerSettings();
+bool saveSingleColor();
 bool saveCurrentSettings();
 bool saveSystemSettings();
 bool savePassword();
@@ -247,7 +250,7 @@ void applySettings() {
       }
     } else if (currentEffect == EFFECT_SINGLE) {
       for (int i = 0; i < ledCount; ++i) {
-        strip->SetPixelColor(i, RgbColor(singleColor[0], singleColor[1], singleColor[2]));
+        strip->SetPixelColor(i, RgbColor(singleColor[singleColorIndex][0], singleColor[singleColorIndex][1], singleColor[singleColorIndex][2]));
       }
     }
   } else {
@@ -453,10 +456,10 @@ void setup() {
    
   applySettings();
   Serial.println("Color settings loaded.");
-  Serial.print("Single color: ");
-  Serial.print(singleColor[0]);Serial.print(", ");
-  Serial.print(singleColor[1]);Serial.print(", ");
-  Serial.print(singleColor[2]);Serial.println("");
+  Serial.print("Single color: index = ");Serial.print(singleColorIndex);Serial.print(", color = [");
+  Serial.print(singleColor[singleColorIndex][0]);Serial.print(", ");
+  Serial.print(singleColor[singleColorIndex][1]);Serial.print(", ");
+  Serial.print(singleColor[singleColorIndex][2]);Serial.println("]");
   Serial.print("Multi color: index = ");Serial.println(multiColorIndex);
   Serial.print("Current effect: ");Serial.println(currentEffect);
    

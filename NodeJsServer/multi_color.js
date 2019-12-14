@@ -456,7 +456,6 @@ window.onload=function(){
 
 	requestSettings(mcIndex);
 
-	cp.c = [0,0,0];// todo read from settings file
 	loadColorPicker();
 	
 	createSlotList();
