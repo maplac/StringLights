@@ -17,3 +17,7 @@ Maska pro StringLightsRevA nema pady pro smd.
 V multicolor se spatne formatuje skrolovani, kdyz je nastavenych hodne barev.
 
 Pri skrolovani HW tlacitkem preskakovat cerne barvy. V single i multi color.
+
+Opravit SoftAP.
+
+Otestovat obnoveni z vypadku wifi.

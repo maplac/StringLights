@@ -38,6 +38,11 @@ struct button_struct {
   bool longPressEnabled = false;
 } button1, button2;
 
+struct connecting_to_wifi_struct {
+  bool connected;
+  unsigned long lastTime;
+} wifiStatus;
+
 const int gpioLed2B = 33;
 const int gpioLed2G = 32;
 const int gpioLed2R = 25;
@@ -72,6 +77,7 @@ int currentEffect;
 int isOn;
 int isSoftAP = 0;
 volatile int dummy = 0;
+bool setupFailed;
 
 // Allocate a buffer to store contents of files
 //std::unique_ptr<char[]> buf(new char[MAX_SETTINGS_FILE_SIZE]);
@@ -265,8 +271,60 @@ void applySettings() {
 }
 
 //=============================================================================================
+void checkWifiConnection() {
+  unsigned long timeNow = millis();
+  if ((timeNow - wifiStatus.lastTime) > 1000) {
+    wifiStatus.lastTime = timeNow;
+    if (WiFi.status() != WL_CONNECTED) {
+      static int dotCounter = 0;
+      if (wifiStatus.connected) {
+        wifiStatus.connected = false;
+        dotCounter = 0;
+        Serial.println("WiFi connection lost. Reconnecting...");
+        setLedColor(1, GREEN);
+      } else {
+        dotCounter++;
+        if (dotCounter == 60) {
+          dotCounter = 0;
+          Serial.println(".");
+        } else {
+          Serial.print(".");
+        }
+      }
+    } else {
+      if (!wifiStatus.connected) {
+        wifiStatus.connected = true;
+        Serial.println("WiFi connected.");
+        IPAddress ipAddress = WiFi.localIP();
+        IPAddress ipAddressLast(wifiSettings.currentIp[0], wifiSettings.currentIp[1], wifiSettings.currentIp[2], wifiSettings.currentIp[3]);
+      
+        Serial.print("IP address: ");
+        Serial.println(ipAddress);
+      
+        if (ipAddress != ipAddressLast) {
+          Serial.println("IP address changed since last time.");
+        }
+        wifiSettings.lastIp[0] = wifiSettings.currentIp[0];
+        wifiSettings.lastIp[1] = wifiSettings.currentIp[1];
+        wifiSettings.lastIp[2] = wifiSettings.currentIp[2];
+        wifiSettings.lastIp[3] = wifiSettings.currentIp[3];
+        wifiSettings.currentIp[0] = ipAddress[0];
+        wifiSettings.currentIp[1] = ipAddress[1];
+        wifiSettings.currentIp[2] = ipAddress[2];
+        wifiSettings.currentIp[3] = ipAddress[3];
+        saveSystemSettings();
+
+        server.begin();
+        Serial.println("HTTP server started");
+        setLedColor(1, BLUE);
+      }
+    }
+  }
+}
+//=============================================================================================
 void setup() {
   int freeHeap = ESP.getFreeHeap();
+  setupFailed = false;
   
   fileBuffer = new char[MAX_SETTINGS_FILE_SIZE];
   Serial.begin(115200);
@@ -290,61 +348,64 @@ void setup() {
   //Initialize File System
   if(!SPIFFS.begin(true)){
     Serial.println("An Error has occurred while mounting SPIFFS");
+    setupFailed = true;
     setLedColor(1, RED);
     return;
   }
   Serial.println("File System Initialized");
 
-  //=============================================================================================
-  /*Serial.println("Loading single color settings...");
-  if (loadSingleColor() < 0) {
-    Serial.println("Load settings failed");
-  }
-  Serial.println("Settings loaded");*/
-  //=============================================================================================
-
   // Load system setting
   if (loadSystemSettings() < 0){
     Serial.println("Load system setting failed.");
+    setupFailed = true;
     setLedColor(1, RED);
     return;
   }
   Serial.println("System settings loaded.");
+
+  // Initialize WS2812 (NeoPixel) strip
+  strip = new NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod >(ledCount, 21);
+  strip->Begin();
+
+  int res = 0;
+  res += loadColorPicker();
+  res += loadSingleColor();
+  res += loadMultiColor();
+  res += loadMultiColorSlot();
+  res += loadCurrentSettings();
+
+  if (res != 0) {
+    Serial.println("Load color settings failed.");
+    setupFailed = true;
+    setLedColor(1, RED);
+    return;
+  }
+   
+  applySettings();
+  Serial.println("Color settings loaded.");
+  Serial.print("Single color: index = ");Serial.print(singleColorIndex);Serial.print(", color = [");
+  Serial.print(singleColor[singleColorIndex][0]);Serial.print(", ");
+  Serial.print(singleColor[singleColorIndex][1]);Serial.print(", ");
+  Serial.print(singleColor[singleColorIndex][2]);Serial.println("]");
+  Serial.print("Multi color: index = ");Serial.println(multiColorIndex);
+  Serial.print("Current effect: ");Serial.println(currentEffect);
+  
+  // Initialize Webserver
+  server.on("/", handleRoot);
+  server.on("/index", HTTP_POST, handleIndex);
+  server.on("/color-picker", HTTP_POST, handleColorPicker);
+  server.on("/single-color", HTTP_POST, handleSingleColor);
+  server.on("/multi-color", HTTP_POST, handleMultiColor);
+  server.on("/transparent", HTTP_POST, handleTransparent);
+  server.onNotFound(handleWebRequests);
+  Serial.println("HTTP server configured.");
 
   // Override settings (for debugging)
   //ledCount = 1;
   //stringToArray("unstuckunstuck", wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
   //stringToArray("Tenda", wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
 
-  /*
-    //Initialize AP Mode
-    WiFi.softAP(ssid);  //Password not used
-    IPAddress myIP = WiFi.softAPIP();
-    Serial.print("Web Server IP:");
-    Serial.println(myIP);
-  */
-
-  // some dummy code to make the wifi work
-//  if(dummy){
-//    pinMode(gpioLed2B, OUTPUT);
-//    digitalWrite(gpioLed2B, LOW);
-//    pinMode(gpioLedProcessing, OUTPUT);
-//    digitalWrite(gpioLedProcessing, LOW);
-//    pinMode(gpioSwitch1, INPUT);
-//    pinMode(gpioBut1, INPUT);
-//    pinMode(gpioBut2, INPUT);
-//    attachInterrupt(digitalPinToInterrupt(gpioBut1), handleInterruptBut1, CHANGE);
-//    attachInterrupt(digitalPinToInterrupt(gpioBut2), handleInterruptBut2, CHANGE);
-//  }
-  
   isSoftAP = digitalRead(gpioSwitch1);
-  //*
-  // Initialize WiFi
-  WiFi.persistent(false);
-  WiFi.disconnect();
-  WiFi.mode(WIFI_OFF);
-  WiFi.mode(WIFI_STA);
-  //delay(100);
   
   if (isSoftAP) {
     Serial.println("Using soft-AP.");
@@ -379,9 +440,9 @@ void setup() {
       Serial.print("DNS: ");
       printIp(wifiSettings.dns); Serial.println("");
       //IPAddress ip(10,0,0,220);
-        //IPAddress gateway(10,0,0,138);
-        //IPAddress subnet(255,255,255,0);
-        //IPAddress dns(8,8,8,8);
+      //IPAddress gateway(10,0,0,138);
+      //IPAddress subnet(255,255,255,0);
+      //IPAddress dns(8,8,8,8);
       IPAddress ip(wifiSettings.staticIp[0], wifiSettings.staticIp[1], wifiSettings.staticIp[2], wifiSettings.staticIp[3]);
       IPAddress gateway(wifiSettings.gateway[0], wifiSettings.gateway[1], wifiSettings.gateway[2], wifiSettings.gateway[3]);
       IPAddress subnet(wifiSettings.subnet[0], wifiSettings.subnet[1], wifiSettings.subnet[2], wifiSettings.subnet[3]);
@@ -390,54 +451,18 @@ void setup() {
     } else {
       Serial.println("Using DHCP.");
     }
-  
-    //WiFi.hostname("StringLights");
-  
-    // FIX >>>>>
-      //WiFi.persistent(false);
-      //WiFi.mode(WIFI_OFF); // this is a temporary line, to be removed after SDK update to 1.5.4
-      //WiFi.mode(WIFI_STA);
-    // <<<<<<<<<
-  
-    //WiFi.setSleepMode(WIFI_NONE_SLEEP);
-    //WiFi.persistent(false);
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(wifiSettings.ssid, wifiSettings.password);
-  
-    Serial.print("Connecting");
-    int dummyCounter = 0;
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(1000);
-      dummyCounter++;
-      if (dummyCounter == 10) {
-        dummyCounter = 0;
-        Serial.println(".");
-      } else {
-        Serial.print(".");
-      }
-    }
-    Serial.println(" connected.");
 
-    IPAddress ipAddress = WiFi.localIP();
-    IPAddress ipAddressLast(wifiSettings.currentIp[0], wifiSettings.currentIp[1], wifiSettings.currentIp[2], wifiSettings.currentIp[3]);
-  
-    Serial.print("IP address: ");
-    Serial.println(ipAddress);
-  
-    if (ipAddress != ipAddressLast) {
-      Serial.println("IP address changed since last time.");
-    }
-    wifiSettings.lastIp[0] = wifiSettings.currentIp[0];
-    wifiSettings.lastIp[1] = wifiSettings.currentIp[1];
-    wifiSettings.lastIp[2] = wifiSettings.currentIp[2];
-    wifiSettings.lastIp[3] = wifiSettings.currentIp[3];
-    wifiSettings.currentIp[0] = ipAddress[0];
-    wifiSettings.currentIp[1] = ipAddress[1];
-    wifiSettings.currentIp[2] = ipAddress[2];
-    wifiSettings.currentIp[3] = ipAddress[3];
-    saveSystemSettings();
+    WiFi.persistent(false);
+    WiFi.disconnect();
+    WiFi.mode(WIFI_OFF);
+    WiFi.mode(WIFI_STA);
+    //WiFi.hostname("StringLights");
+    //WiFi.setSleepMode(WIFI_NONE_SLEEP);
+    WiFi.begin(wifiSettings.ssid, wifiSettings.password);
   }
-  //*/
+  
+  wifiStatus.connected = false;
+  wifiStatus.lastTime = millis();
   
   /*
     if (MDNS.begin("test")) {              // Start the mDNS responder for esp8266.local
@@ -448,56 +473,23 @@ void setup() {
     MDNS.addService("http", "tcp", 80);
   */
 
-  // Initialize WS2812 (NeoPixel) strip
-  strip = new NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod >(ledCount, 21);
-  strip->Begin();
-
-  int res = 0;
-  res += loadColorPicker();
-  res += loadSingleColor();
-  res += loadMultiColor();
-  res += loadMultiColorSlot();
-  res += loadCurrentSettings();
-
-  if (res != 0) {
-    Serial.println("Load color settings failed.");
-    setLedColor(1, RED);
-    return;
-  }
-   
-  applySettings();
-  Serial.println("Color settings loaded.");
-  Serial.print("Single color: index = ");Serial.print(singleColorIndex);Serial.print(", color = [");
-  Serial.print(singleColor[singleColorIndex][0]);Serial.print(", ");
-  Serial.print(singleColor[singleColorIndex][1]);Serial.print(", ");
-  Serial.print(singleColor[singleColorIndex][2]);Serial.println("]");
-  Serial.print("Multi color: index = ");Serial.println(multiColorIndex);
-  Serial.print("Current effect: ");Serial.println(currentEffect);
-   
-  // Initialize Webserver
-  server.on("/", handleRoot);
-  server.on("/index", HTTP_POST, handleIndex);
-  server.on("/color-picker", HTTP_POST, handleColorPicker);
-  server.on("/single-color", HTTP_POST, handleSingleColor);
-  server.on("/multi-color", HTTP_POST, handleMultiColor);
-  server.on("/transparent", HTTP_POST, handleTransparent);
-  server.onNotFound(handleWebRequests);
-  server.begin();
-  Serial.println("HTTP server started");
-
   attachInterrupt(digitalPinToInterrupt(gpioBut1), handleInterruptBut1, CHANGE);
   attachInterrupt(digitalPinToInterrupt(gpioBut2), handleInterruptBut2, CHANGE);
 
   Serial.print("Free heap at start:    "); Serial.println(freeHeap);
   Serial.print("Free heap after setup: "); Serial.println(ESP.getFreeHeap());
   Serial.println("Setup finished.");
-  setLedColor(1, BLUE);
+  Serial.println("Connecting to WiFi...");
 }
 
 //=============================================================================================
 void loop() {
-  //MDNS.update();
+  if (setupFailed)
+    return;
+
+  checkWifiConnection();
   server.handleClient();
   handleButton1();
   handleButton2();
+  //MDNS.update();
 }
