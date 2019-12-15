@@ -1,4 +1,3 @@
-
 int loadSingleColor(){
   if (readJson("/single_color_settings.js", 7)) {
     Serial.print("Reading JSON from file \"/single_color_settings.js\" failed. "); Serial.println(errorMessage);
@@ -26,6 +25,7 @@ int loadSingleColor(){
   return 0;
 }
 
+//=============================================================================================
 bool saveSingleColor() {
   File file = SPIFFS.open("/single_color_settings.js", "w");
   if (file) {
@@ -79,6 +79,7 @@ void handleSingleColor(){
             bool saveSettingsFailed = false;
             if(!saveSingleColor()) {
               saveSettingsFailed = true;
+              Serial.println("single_color_settings.js file open failed");
             }
 
             // save current settings if required
@@ -94,6 +95,7 @@ void handleSingleColor(){
             if (saveCurrentSettingsRequired) {
               if(!saveCurrentSettings()){
                 saveSettingsFailed = true;
+                Serial.println("current_settings.js file open failed");
               }
             }
 
@@ -125,10 +127,7 @@ void handleSingleColor(){
 
   if (!error) {
     server.send(200,"text/html", "OK");
-    for(int i = 0; i < ledCount; ++i){
-      strip->SetPixelColor(i, RgbColor(singleColor[singleColorIndex][0], singleColor[singleColorIndex][1], singleColor[singleColorIndex][2]));
-    }
-    strip->Show();
+    applySettings();
   }
   
   setLedColor(2, NONE);

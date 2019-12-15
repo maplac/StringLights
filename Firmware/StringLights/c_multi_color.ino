@@ -9,9 +9,10 @@ int loadMultiColor(){
     String newName = jsonDoc["mcnames"][i];
     newName.toCharArray(multiColorNames[i], COLOR_NAME_LENGTH);
   }
+  return 0;
+}
 
-  //---- load active settings ----
-  
+int loadMultiColorSlot() {
   String fileName;
   fileName = "/multi_color_settings_" + String(multiColorIndex) + ".js";
   char nameArr[32];
@@ -36,6 +37,53 @@ int loadMultiColor(){
     multiColor[i][2] = jsonDoc["mc"][i][2];
   }
   return 0;
+}
+
+//=============================================================================================
+bool saveMultiColor() {
+  File file = SPIFFS.open("/multi_color_settings.js", "w");
+  if (!file) {
+      
+  }else{
+    file.print("mcbasestr='{\"mcindex\":");
+    file.print(multiColorIndex);
+    file.print(",\"mccount\":");
+    file.print(MULTI_COLOR_COUNT);
+    file.print(",\"mcnames\":[");
+    for(int i = 0; i < MULTI_COLOR_COUNT; ++i){
+      if(i > 0){
+        file.print(",");
+      }
+      file.print("\"");
+      file.print(String(multiColorNames[i]));
+      file.print("\"");
+    }
+    file.print("]}'");
+    file.close();
+  }
+}
+
+bool saveMultiColorSlot() {
+  String fileName = "/multi_color_settings_" + String(multiColorIndex) + ".js";
+  File file = SPIFFS.open(fileName, "w");
+  if (!file) {
+      return false;
+  }
+  file.print("{\"mc\":[");
+  for(int i = 0; i < multiColorLength; ++i){
+    if(i > 0){
+      file.print(",");
+    }
+    file.print("[");
+    file.print(multiColor[i][0]);file.print(",");
+    file.print(multiColor[i][1]);file.print(",");
+    file.print(multiColor[i][2]);file.print("]");
+  }
+  file.print("],\"mcassign\":");
+  file.print(multiColorAssignment);
+  file.print("}");
+  file.close();
+  return true;
 }
 
 //=============================================================================================
@@ -73,74 +121,43 @@ void handleMultiColor(){
                     multiColorLength++;
                   }
                   multiColorAssignment = assignment;
+
+                  bool saveSettingsFailed = false;
                   
-                  String fileName = "/multi_color_settings_" + String(index) + ".js";
-                  File file = SPIFFS.open(fileName, "w");
-                  if (!file) {
-                      error = true;
-                      server.send(400,"text/html", "multi_color_settings_x.js file open failed");
-                  }else{
-                    file.print("{\"mc\":[");
-                    for(int i = 0; i < multiColorLength; ++i){
-                      if(i > 0){
-                        file.print(",");
-                      }
-                      file.print("[");
-                      file.print(multiColor[i][0]);file.print(",");
-                      file.print(multiColor[i][1]);file.print(",");
-                      file.print(multiColor[i][2]);file.print("]");
-                    }
-                    file.print("],\"mcassign\":");
-                    file.print(multiColorAssignment);
-                    file.print("}");
-                    file.close();
-                  }
-  
                   // if index changed
                   if(multiColorIndex != index){
                     multiColorIndex = index;
-                    file = SPIFFS.open("/multi_color_settings.js", "w");
-                    if (!file) {
-                        error = true;
-                        server.send(400,"text/html", "multi_color_settings.js file open failed");
-                    }else{
-                      file.print("mcbasestr='{\"mcindex\":");
-                      file.print(multiColorIndex);
-                      file.print(",\"mccount\":");
-                      file.print(MULTI_COLOR_COUNT);
-                      file.print(",\"mcnames\":[");
-                      for(int i = 0; i < MULTI_COLOR_COUNT; ++i){
-                        if(i > 0){
-                          file.print(",");
-                        }
-                        file.print("\"");
-                        file.print(String(multiColorNames[i]));
-                        file.print("\"");
-                      }
-                      file.print("]}'");
-                      file.close();
+                    if(!saveMultiColor()) {
+                      saveSettingsFailed = true;
+                      Serial.println("multi_color_settings.js file open failed");
                     }
                   }
-                  currentEffect = EFFECT_MULTI;
-                  isOn = 1;
-                  if (multiColorAssignment == MULTICOLOR_ASSIGNMENT_SPREAD) {
-                    int denominator = ceil(ledCount/multiColorLength);
-                    for(int i = 0; i < ledCount; ++i){
-                      int index = floor(i/denominator);
-                      if (index >= multiColorLength) // should not happen
-                        index = multiColorLength - 1;
-                      strip->SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
-                    }
-                  } else {
-                    for(int i = 0; i < ledCount; ++i){
-                      int index = i % multiColorLength;
-                      strip->SetPixelColor(i, RgbColor(multiColor[index][0], multiColor[index][1], multiColor[index][2]));
-                    }
+
+                  if (!saveMultiColorSlot()) {
+                    saveSettingsFailed = true;
+                    Serial.println("multi_color_settings_x.js file open failed");
                   }
                   
-                  if(!saveCurrentSettings()){
+                  // save current settings if required
+                  bool saveCurrentSettingsRequired = false;
+                  if (currentEffect != EFFECT_MULTI) {
+                    currentEffect = EFFECT_MULTI;
+                    saveCurrentSettingsRequired = true;
+                  }
+                  if (isOn != 1) {
+                    isOn = 1;
+                    saveCurrentSettingsRequired = true;
+                  }
+                  if (saveCurrentSettingsRequired) {
+                    if(!saveCurrentSettings()){
+                      saveSettingsFailed = true;
+                      Serial.println("current_settings.js file open failed");
+                    }
+                  }
+
+                  if(saveSettingsFailed) {
                     error = true;
-                    server.send(400,"text/html", "current_settings.js file open failed");
+                    server.send(400,"text/html", "saving multi_color_settings.js, multi_color_settings_#.js or current_settings.js failed");
                   }
                 }else{
                   error = true;
@@ -166,26 +183,9 @@ void handleMultiColor(){
         String newName = server.arg("name");
         Serial.println("new name: " + newName);
         newName.toCharArray(multiColorNames[index], COLOR_NAME_LENGTH);
-        File file = SPIFFS.open("/multi_color_settings.js", "w");
-        if (!file) {
-            error = true;
-            server.send(400,"text/html", "multi_color_settings.js file open failed");
-        }else{
-          file.print("mcbasestr='{\"mcindex\":");
-          file.print(multiColorIndex);
-          file.print(",\"mccount\":");
-          file.print(MULTI_COLOR_COUNT);
-          file.print(",\"mcnames\":[");
-          for(int i = 0; i < MULTI_COLOR_COUNT; ++i){
-            if(i > 0){
-              file.print(",");
-            }
-            file.print("\"");
-            file.print(String(multiColorNames[i]));
-            file.print("\"");
-          }
-          file.print("]}'");
-          file.close();
+        if(!saveMultiColor()) {
+          error = true;
+          server.send(400,"text/html", "multi_color_settings.js file open failed");
         }
       }else{
         error = true;
@@ -202,8 +202,8 @@ void handleMultiColor(){
   
   if (!error) {
     server.send(200,"text/html", "OK");
-    strip->Show();
+    applySettings();
   }
-    
+
   setLedColor(2, NONE);
 }

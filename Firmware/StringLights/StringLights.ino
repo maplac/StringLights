@@ -84,11 +84,14 @@ String errorMessage;
 int loadSingleColor();
 int loadColorPicker();
 int loadMultiColor();
+int loadMultiColorSlot();
 int loadCurrentSettings();
 int loadSystemSettings();
 
 bool saveColorPickerSettings();
 bool saveSingleColor();
+bool saveMultiColor();
+bool saveMultiColorSlot();
 bool saveCurrentSettings();
 bool saveSystemSettings();
 bool savePassword();
@@ -402,9 +405,16 @@ void setup() {
     WiFi.begin(wifiSettings.ssid, wifiSettings.password);
   
     Serial.print("Connecting");
+    int dummyCounter = 0;
     while (WiFi.status() != WL_CONNECTED) {
       delay(1000);
-      Serial.print(".");
+      dummyCounter++;
+      if (dummyCounter == 10) {
+        dummyCounter = 0;
+        Serial.println(".");
+      } else {
+        Serial.print(".");
+      }
     }
     Serial.println(" connected.");
 
@@ -446,6 +456,7 @@ void setup() {
   res += loadColorPicker();
   res += loadSingleColor();
   res += loadMultiColor();
+  res += loadMultiColorSlot();
   res += loadCurrentSettings();
 
   if (res != 0) {
