@@ -27,7 +27,7 @@ struct wifi_struct {
   unsigned char subnet[4];
   unsigned char gateway[4];
   unsigned char dns[4];
-  bool accessPointActive;
+  bool isSoftAP;
 } wifiSettings;
 
 struct button_struct {
@@ -75,13 +75,9 @@ int multiColorAssignment = 0;
 char multiColorNames[MULTI_COLOR_COUNT][COLOR_NAME_LENGTH];
 int currentEffect;
 int isOn;
-int isSoftAP = 0;
 volatile int dummy = 0;
 bool setupFailed;
 
-// Allocate a buffer to store contents of files
-//std::unique_ptr<char[]> buf(new char[MAX_SETTINGS_FILE_SIZE]);
-//DynamicJsonBuffer jsonBuffer(1000);
 char *fileBuffer;
 StaticJsonDocument<MAX_SETTINGS_FILE_SIZE> jsonDoc;
 String errorMessage;
@@ -402,17 +398,25 @@ void setup() {
 
   // Override settings (for debugging)
   //ledCount = 1;
-  //stringToArray("unstuckunstuck", wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
+  //stringToArray("", wifiSettings.password, MAX_WIFI_CHAR_LENGTH);
   //stringToArray("Tenda", wifiSettings.ssid, MAX_WIFI_CHAR_LENGTH);
 
-  isSoftAP = digitalRead(gpioSwitch1);
+  if (digitalRead(gpioSwitch1) == HIGH) {
+    wifiSettings.isSoftAP = true;
+  } else {
+    wifiSettings.isSoftAP = false;
+  }
   
-  if (isSoftAP) {
+  if (wifiSettings.isSoftAP) {
     Serial.println("Using soft-AP.");
     bool result = WiFi.softAP("StringLights01", "busylion");
     if (result == true) {
+      setLedColor(1, GREEN | BLUE);
       Serial.println("Ready");
+      server.begin();
+      Serial.println("HTTP server started");
     } else {
+      setLedColor(1, GREEN | RED);
       Serial.println("Failed!");
     }
     Serial.println("Wifi SSID: StringLights01");
@@ -459,11 +463,11 @@ void setup() {
     //WiFi.hostname("StringLights");
     //WiFi.setSleepMode(WIFI_NONE_SLEEP);
     WiFi.begin(wifiSettings.ssid, wifiSettings.password);
+    
+    wifiStatus.connected = false;
+    wifiStatus.lastTime = millis();
   }
-  
-  wifiStatus.connected = false;
-  wifiStatus.lastTime = millis();
-  
+
   /*
     if (MDNS.begin("test")) {              // Start the mDNS responder for esp8266.local
       Serial.println("mDNS responder started");
@@ -479,15 +483,17 @@ void setup() {
   Serial.print("Free heap at start:    "); Serial.println(freeHeap);
   Serial.print("Free heap after setup: "); Serial.println(ESP.getFreeHeap());
   Serial.println("Setup finished.");
-  Serial.println("Connecting to WiFi...");
+  if (!wifiSettings.isSoftAP)
+    Serial.println("Connecting to WiFi...");
 }
 
 //=============================================================================================
 void loop() {
   if (setupFailed)
     return;
-
-  checkWifiConnection();
+  
+  if (!wifiSettings.isSoftAP)
+    checkWifiConnection();
   server.handleClient();
   handleButton1();
   handleButton2();
