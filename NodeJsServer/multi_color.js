@@ -7,6 +7,7 @@ var mcIndex = 0;
 var mcNames = [];
 var mc = [];
 var mcAssign = 0;
+var suppressSendSetting = true;
 
 function sendSettings(){
 	var r = "", g = "", b = "";
@@ -439,7 +440,11 @@ function requestSettings(index){
 			document.getElementById("but_undo").disabled = true;
 			var x = document.getElementById('sel_selected');
 			x.innerHTML = mcNames[mcIndex];
-			sendSettings();
+			if (!suppressSendSetting) {
+				sendSettings();
+			} else {
+				suppressSendSetting = false;
+			}
 		}
 	};
 	xhttp.open("GET", "multi_color_settings_" + index + ".js", true);
